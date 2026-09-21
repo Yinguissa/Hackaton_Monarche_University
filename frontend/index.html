@@ -1,0 +1,2886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NoOUTPUT.AI — Intelligent Shipping Document Verification</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+        display: ['"Space Grotesk"','Inter','sans-serif'],
+        mono: ['"JetBrains Mono"','ui-monospace','monospace'],
+      },
+      colors: {
+        navy: {50:'#F2F6FB',100:'#E2EBF5',200:'#C2D6EA',300:'#93B4D6',400:'#5F8BBD',500:'#3D6AA1',600:'#2B5284',700:'#23426B',800:'#1B3554',900:'#132A46',950:'#0A1A2F'},
+        ink:  {900:'#0B1526',800:'#12203A',700:'#1B2E4F',600:'#274067',500:'#3B5478',400:'#5E7398',300:'#8C9DB8',200:'#C0CBDC',100:'#E2E8F2',50:'#F4F7FB'},
+        brand:{50:'#EEF4FF',100:'#DFEAFF',200:'#C5D7FE',300:'#A2BBFC',400:'#7F97F8',500:'#2563EB',600:'#1D4ED8',700:'#1E40AF',800:'#1E3A8A',900:'#172E6E'},
+        aqua: {50:'#ECFEFF',100:'#CFFAFE',300:'#67E8F9',400:'#22D3EE',500:'#06B6D4',600:'#0891B2'},
+        ai:   {50:'#F5F3FF',100:'#EDE9FE',300:'#C4B5FD',400:'#A78BFA',500:'#8B5CF6',600:'#7C3AED',700:'#6D28D9'},
+      },
+      boxShadow: {
+        card:  '0 1px 2px rgba(11,31,53,.05), 0 12px 32px -16px rgba(11,31,53,.14)',
+        lift:  '0 2px 6px rgba(11,31,53,.08), 0 24px 48px -20px rgba(11,31,53,.28)',
+        glowBrand:  '0 8px 24px -8px rgba(37,99,235,.45)',
+        glowAi:     '0 8px 24px -8px rgba(139,92,246,.45)',
+        glowEmerald:'0 8px 24px -8px rgba(16,185,129,.45)',
+        glowDanger: '0 8px 24px -8px rgba(239,68,68,.4)',
+      },
+      keyframes: {
+        floatY:   {'0%,100%':{transform:'translateY(0)'},'50%':{transform:'translateY(-10px)'}},
+        drift:    {'0%,100%':{transform:'translate(0,0) scale(1)'},'33%':{transform:'translate(26px,-20px) scale(1.07)'},'66%':{transform:'translate(-20px,14px) scale(.96)'}},
+        pulseDot: {'0%':{boxShadow:'0 0 0 0 rgba(16,185,129,.45)'},'70%':{boxShadow:'0 0 0 8px rgba(16,185,129,0)'},'100%':{boxShadow:'0 0 0 0 rgba(16,185,129,0)'}},
+        scan:     {'0%':{top:'-18%'},'100%':{top:'112%'}},
+        dashmove: {to:{strokeDashoffset:'-28'}},
+        spinSlow: {to:{transform:'rotate(360deg)'}},
+        pageIn:   {'0%':{opacity:'0',transform:'translateY(14px)'},'100%':{opacity:'1',transform:'none'}},
+        popIn:    {'0%':{opacity:'0',transform:'scale(.94)'},'100%':{opacity:'1',transform:'scale(1)'}},
+        flowDot:  {'0%':{left:'0%',opacity:'0'},'12%':{opacity:'1'},'85%':{opacity:'1'},'100%':{left:'calc(100% - 8px)',opacity:'0'}},
+        nodePing: {'0%':{transform:'scale(.4)',opacity:'.8'},'100%':{transform:'scale(2.6)',opacity:'0'}},
+        shakeX:   {'10%,90%':{transform:'translateX(-1px)'},'20%,80%':{transform:'translateX(2px)'},'30%,50%,70%':{transform:'translateX(-3px)'},'40%,60%':{transform:'translateX(3px)'}},
+        toastbar: {from:{width:'100%'},to:{width:'0%'}},
+      },
+      animation: {
+        floatY:  'floatY 6s ease-in-out infinite',
+        drift:   'drift 15s ease-in-out infinite',
+        pulseDot:'pulseDot 2s ease-out infinite',
+        scan:    'scan 2.6s ease-in-out infinite',
+        dashmove:'dashmove 1.5s linear infinite',
+        spinSlow:'spinSlow 16s linear infinite',
+        pageIn:  'pageIn .5s cubic-bezier(.22,1,.36,1) both',
+        popIn:   'popIn .32s cubic-bezier(.22,1,.36,1) both',
+        flowDot: 'flowDot 2.6s linear infinite',
+        shakeX:  'shakeX .5s both',
+      },
+    }
+  }
+}
+</script>
+
+<!-- @layer components → utilities like pl-4 always win over these base styles -->
+<style type="text/tailwindcss">
+  @layer components {
+    .card { @apply bg-white rounded-2xl shadow-card border border-slate-100; }
+    .input { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-brand-400 focus:ring-4 focus:ring-brand-500/10; }
+    .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-500 shadow-glowBrand transition-all duration-200 hover:brightness-110 hover:-translate-y-px hover:scale-[1.01] active:translate-y-0 active:scale-[.99] disabled:opacity-60 disabled:pointer-events-none select-none; }
+    .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-ink-700 bg-white border border-slate-200 transition-all duration-200 hover:border-brand-300 hover:text-brand-600 hover:-translate-y-px active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none select-none; }
+    .btn-danger-o { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 transition-all duration-200 hover:bg-red-50 hover:-translate-y-px active:translate-y-0 select-none; }
+    .btn-amber-o { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-amber-600 bg-white border border-amber-200 transition-all duration-200 hover:bg-amber-50 hover:-translate-y-px active:translate-y-0 select-none; }
+    .btn-emerald { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-glowEmerald transition-all duration-200 hover:brightness-110 hover:-translate-y-px active:translate-y-0 select-none; }
+    .btn-sm { @apply px-3 py-1.5 text-[13px] rounded-lg; }
+    .th { @apply px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap; }
+    .text-grad { @apply bg-gradient-to-r from-brand-500 via-brand-400 to-aqua-400 bg-clip-text text-transparent; }
+  }
+</style>
+
+<style>
+  html,body{height:100%}
+  body{background:#F4F7FB;-webkit-font-smoothing:antialiased}
+  ::selection{background:#2563EB22}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#C0CBDC;border-radius:99px;border:2px solid #F4F7FB}
+  ::-webkit-scrollbar-thumb:hover{background:#8C9DB8}
+  .particle{position:absolute;border-radius:9999px;background:#7DD3FC;animation:floatY linear infinite;pointer-events:none}
+  .dash-anim{stroke-dasharray:6 9;animation:dashmove 1.5s linear infinite}
+  .node-ping{transform-origin:center;transform-box:fill-box;animation:nodePing 2.4s ease-out infinite}
+  .toastbar{animation:toastbar 3.8s linear forwards}
+  .text-grad-l{background:linear-gradient(90deg,#60A5FA,#22D3EE);-webkit-background-clip:text;background-clip:text;color:transparent}
+  input[type=range]{accent-color:#2563EB}
+  kbd{font-family:'JetBrains Mono',monospace}
+</style>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+/* =====================================================================================
+   NoOUTPUT.AI — AI Shipping Document Verification Platform · v2.2
+   Fixes: flex-cell fields (zero icon/text overlap on login, topbar, inbox) · Google sign-in
+   ===================================================================================== */
+
+const { useState, useEffect, useRef, useMemo, useContext, createContext } = React;
+
+/* ================================================================
+   src/config/product.ts
+   ================================================================ */
+const PRODUCT = {
+  name: 'NoOUTPUT',
+  suffix: '.AI',
+  tagline: 'AI Document Verification for Smarter Shipping',
+  sub: 'Intelligent Shipping Document Verification',
+  subShort: 'AI Document Verification',
+  pillars: ['Documents', 'Intelligence', 'Trusted Decisions'],
+  engine: 'NOOUTPUT Engine v2.1',
+};
+
+/* ================================================================
+   src/config/taxonomy.ts
+   ================================================================ */
+const CATEGORIES = {
+  BL_COMPARISON: { label:'BL Comparison', color:'#2563EB', icon:'gitCompare' },
+  SI_REQUEST:    { label:'SI Request',    color:'#06B6D4', icon:'fileText'   },
+  INVOICE_QUERY: { label:'Invoice',       color:'#8B5CF6', icon:'receipt'    },
+  GENERAL:       { label:'General',       color:'#10B981', icon:'mail'       },
+  SPAM:          { label:'Spam',          color:'#F59E0B', icon:'alertTriangle' },
+};
+const STATUS = {
+  OK:           { label:'OK',           color:'#059669', bg:'#ECFDF5', icon:'checkCircle' },
+  MISMATCH:     { label:'Mismatch',     color:'#DC2626', bg:'#FEF2F2', icon:'xCircle' },
+  NEEDS_REVIEW: { label:'Needs review', color:'#D97706', bg:'#FFFBEB', icon:'helpCircle' },
+  REVIEWED:     { label:'Reviewed',     color:'#0F766E', bg:'#F0FDFA', icon:'userCheck' },
+  REJECTED:     { label:'Rejected',     color:'#475569', bg:'#F1F5F9', icon:'x' },
+  PROCESSED:    { label:'Processed',    color:'#475569', bg:'#F1F5F9', icon:'check' },
+  PROCESSING:   { label:'Processing',   color:'#2563EB', bg:'#EFF6FF', icon:'loader' },
+  ERROR:        { label:'Error',        color:'#E11D48', bg:'#FFF1F2', icon:'alertCircle' },
+};
+const FIELDS = [
+  { key:'shipper',           label:'Shipper',            icon:'building' },
+  { key:'consignee',         label:'Consignee',          icon:'user' },
+  { key:'notify_party',      label:'Notify Party',       icon:'flag' },
+  { key:'port_of_loading',   label:'Port of Loading',    icon:'anchor' },
+  { key:'port_of_discharge', label:'Port of Discharge',  icon:'mapPin' },
+  { key:'container_count',   label:'Container Count',    icon:'box' },
+  { key:'gross_weight_kg',   label:'Gross Weight',       icon:'scale' },
+];
+const REASONS = {
+  unreadable:         { label:'Unreadable document',    icon:'scan',        color:'#DC2626', bg:'#FEF2F2' },
+  missing_attachment: { label:'Missing attachment',     icon:'paperclip',   color:'#D97706', bg:'#FFFBEB' },
+  wrong_doc_type:     { label:'Wrong document type',    icon:'files',       color:'#7C3AED', bg:'#F5F3FF' },
+  missing_value:      { label:'Missing required value', icon:'helpCircle',  color:'#2563EB', bg:'#EFF6FF' },
+  manual:             { label:'Escalated by reviewer',  icon:'userCheck',   color:'#2563EB', bg:'#EFF6FF' },
+};
+const DEFECT_NOTES = {
+  container_count:   'The SI instructs 3 containers; the draft BL declares 4. An extra unit was reported at the terminal gate-in.',
+  gross_weight_kg:   'Declared weights differ by 2,000 kg — likely cargo added after the SI was submitted.',
+  consignee:         'The consignee legal entity differs between documents. Verify before release.',
+  port_of_discharge: 'Discharge ports differ. Vessel rotation may have changed after SI submission.',
+};
+
+/* ================================================================
+   src/data/mock.ts
+   ================================================================ */
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const doc = (name, type, size, fields, status, excerpt) => ({ name, type, size, fields, status, excerpt });
+
+const initialEmails = [
+  { id:'EML-1001', subject:'BL Verification Request — Booking MSCU7890123', sender:'ops@meridian-traders.com', from:'Lena Hoffmann · Meridian Traders',
+    category:'BL_COMPARISON', status:'MISMATCH', conf:.97, date:'Sep 21, 2026', time:'09:14',
+    body:'Hi team, please verify the draft BL (MSCU7890123) against our SI before release. Flag anything that does not match — especially container counts, our forwarding agent reported a possible over-count at the terminal.',
+    atts:[ doc('SI_MSCU7890123.pdf','SI','412 KB',7,'extracted',['SHIPPER: MERIDIAN TRADERS LTD.','CONSIGNEE: PACIFIC RIM IMPORTS INC.','CONTAINER COUNT: 3 x 40HC','GROSS WEIGHT: 21,500 KG']),
+           doc('BL_draft_MSCU7890123.pdf','BL','388 KB',7,'extracted',['Shipper: Meridian Traders Ltd.','Total Containers: 4','Gross Weight: 21,500 kg']) ],
+    defectFields:['container_count'],
+    si:{shipper:'Meridian Traders Ltd.',consignee:'Pacific Rim Imports Inc.',notify_party:'Pacific Rim Imports — Receiving Dept.',port_of_loading:'Shanghai, CN (CNSHA)',port_of_discharge:'Rotterdam, NL (NLRTM)',container_count:3,gross_weight_kg:21500},
+    bl:{shipper:'Meridian Traders Ltd.',consignee:'Pacific Rim Imports Inc.',notify_party:'Pacific Rim Imports — Receiving Dept.',port_of_loading:'Shanghai, CN (CNSHA)',port_of_discharge:'Rotterdam, NL (NLRTM)',container_count:4,gross_weight_kg:21500},
+    evidence:[{field:'container_count',doc:'SI',text:'CONTAINER COUNT: 3 x 40HC'},{field:'container_count',doc:'BL',text:'TOTAL CONTAINERS: 4'}] },
+
+  { id:'EML-1002', subject:'Draft BL for approval — HSCG2299017', sender:'freight@nordwind-line.de', from:'Jonas Weber · Nordwind Line',
+    category:'BL_COMPARISON', status:'OK', conf:.99, date:'Sep 21, 2026', time:'08:52',
+    body:'Our draft BL for booking HSCG2299017 is ready. Please run it against the SI on file and confirm everything matches before we issue the original.',
+    atts:[ doc('SI_HSCG2299017.pdf','SI','351 KB',7,'extracted'), doc('BL_HSCG2299017.pdf','BL','330 KB',7,'extracted') ],
+    defectFields:[],
+    si:{shipper:'Nordwind Logistik GmbH',consignee:'Andes Fresh Foods S.A.',notify_party:'Andes Fresh Foods S.A.',port_of_loading:'Hamburg, DE (DEHAM)',port_of_discharge:'Buenos Aires, AR (ARBUE)',container_count:2,gross_weight_kg:18400},
+    bl:{shipper:'Nordwind Logistik GmbH',consignee:'Andes Fresh Foods S.A.',notify_party:'Andes Fresh Foods S.A.',port_of_loading:'Hamburg, DE (DEHAM)',port_of_discharge:'Buenos Aires, AR (ARBUE)',container_count:2,gross_weight_kg:18400} },
+
+  { id:'EML-1003', subject:'BL vs SI check — container numbers differ?', sender:'docs@evergreen-hk.com', from:'Vivian Cheng · Evergreen HK',
+    category:'BL_COMPARISON', status:'NEEDS_REVIEW', conf:.62, date:'Sep 21, 2026', time:'09:41',
+    body:'Attached are our SI and the scanned draft BL. The copy from the terminal is quite faded — please check the container numbers carefully.',
+    atts:[ doc('SI_EVG2201.pdf','SI','298 KB',7,'extracted',['SHIPPER: EVERGREEN HARDWARE CO. LTD.','CONSIGNEE: HALCYON RETAIL GROUP','CONTAINER COUNT: 3 x 40HC','GROSS WEIGHT: 19,750 KG']),
+           doc('BL_scan_EVG2201.pdf','BL','1.2 MB',2,'failed',['[scan quality 41 dpi — OCR failed]','Shipper: Evergreen Hardware Co. ????','...']) ],
+    defectFields:[], reviewReason:'unreadable',
+    si:{shipper:'Evergreen Hardware Co. Ltd.',consignee:'Halcyon Retail Group',notify_party:'Halcyon Retail Group',port_of_loading:'Hong Kong (HKHKG)',port_of_discharge:'Felixstowe, GB (GBFXT)',container_count:3,gross_weight_kg:19750},
+    bl:null },
+
+  { id:'EML-1004', subject:'SI vs draft BL — please verify weights', sender:'shipping@aptus-chemicals.com', from:'Priya Nair · Aptus Chemicals',
+    category:'BL_COMPARISON', status:'MISMATCH', conf:.96, date:'Sep 20, 2026', time:'17:26',
+    body:'The gross weight on the draft BL looks higher than what we declared on the SI. Could you run the comparison and confirm which figure is correct?',
+    atts:[ doc('SI_APT88410.pdf','SI','402 KB',7,'extracted'), doc('BL_APT88410.pdf','BL','377 KB',7,'extracted') ],
+    defectFields:['gross_weight_kg'],
+    si:{shipper:'Aptus Chemicals NV',consignee:'Westport Industrial Corp.',notify_party:'Westport Industrial Corp.',port_of_loading:'Busan, KR (KRPUS)',port_of_discharge:'Long Beach, US (USLGB)',container_count:5,gross_weight_kg:22850},
+    bl:{shipper:'Aptus Chemicals NV',consignee:'Westport Industrial Corp.',notify_party:'Westport Industrial Corp.',port_of_loading:'Busan, KR (KRPUS)',port_of_discharge:'Long Beach, US (USLGB)',container_count:5,gross_weight_kg:24850},
+    evidence:[{field:'gross_weight_kg',doc:'SI',text:'GROSS WEIGHT: 22,850 KG'},{field:'gross_weight_kg',doc:'BL',text:'GROSS WEIGHT: 24,850 KG'}] },
+
+  { id:'EML-1005', subject:'New SI for booking EGHJ3310455', sender:'ops@transandes.cl', from:'Marco Silva · TransAndes',
+    category:'SI_REQUEST', status:'PROCESSED', conf:.94, date:'Sep 20, 2026', time:'15:03',
+    body:'Please find the completed Shipping Instruction for booking EGHJ3310455 attached. Kindly confirm receipt and expected BL cut-off.',
+    atts:[ doc('SI_EGHJ3310455.pdf','SI','366 KB',7,'extracted') ],
+    defectFields:[],
+    si:{shipper:'TransAndes Frutera SA',consignee:'Rotterdam Fresh Hub BV',notify_party:'Rotterdam Fresh Hub BV',port_of_loading:'Valparaiso (CLVAP)',port_of_discharge:'Rotterdam (NLRTM)',container_count:3,gross_weight_kg:24600} },
+
+  { id:'EML-1006', subject:'Invoice INV-88412 — detention charges clarification', sender:'ap@halcyon-retail.com', from:'Accounts · Halcyon Retail',
+    category:'INVOICE_QUERY', status:'PROCESSED', conf:.91, date:'Sep 20, 2026', time:'11:47',
+    body:'We received invoice INV-88412 with two days of detention charges. Could you clarify why free time was exceeded? Booking ref HSCG2299017.',
+    atts:[], defectFields:[] },
+
+  { id:'EML-1007', subject:'Port congestion update — Singapore, Week 38', sender:'notices@portnet.sg', from:'PSA Port Updates',
+    category:'GENERAL', status:'PROCESSED', conf:.88, date:'Sep 20, 2026', time:'10:12',
+    body:'Advisory: berth congestion at Singapore PSA continues. Vessels may experience 12–24h delays. No action is required from consignees at this time.',
+    atts:[], defectFields:[] },
+
+  { id:'EML-1008', subject:'URGENT: Your shipment is being held — action required', sender:'unknown@fast-cash-now.biz', from:'Dr. Money',
+    category:'SPAM', status:'PROCESSED', conf:.99, date:'Sep 20, 2026', time:'09:38',
+    body:'Dear customer, your container has been seized by customs! Pay the release fee immediately via gift card to avoid permanent forfeiture…',
+    atts:[], defectFields:[] },
+
+  { id:'EML-1009', subject:'BL check request (SI attached)', sender:'tom@fjordlog.no', from:'Tom Eriksen · Fjord Logistics',
+    category:'BL_COMPARISON', status:'NEEDS_REVIEW', conf:.58, date:'Sep 19, 2026', time:'16:44',
+    body:'Please compare our SI with the draft BL once it is issued. I believe only the SI made it into this email — the BL will follow from the carrier.',
+    atts:[ doc('SI_FJL55120.pdf','SI','289 KB',7,'extracted',['SHIPPER: FJORD LOGISTICS AS','CONSIGNEE: BAFFIN OUTDOOR CO.','CONTAINER COUNT: 2 x 20GP']) ],
+    defectFields:[], reviewReason:'missing_attachment',
+    si:{shipper:'Fjord Logistics AS',consignee:'Baffin Outdoor Co.',notify_party:'Baffin Outdoor Co.',port_of_loading:'Oslo (NOOSL)',port_of_discharge:'Halifax, CA (CAHZD)',container_count:2,gross_weight_kg:14100},
+    bl:null },
+
+  { id:'EML-1010', subject:'Draft BL 559102 — consignee looks wrong', sender:'anna@kestrel-ab.se', from:'Anna Lindqvist · Kestrel Outdoor',
+    category:'BL_COMPARISON', status:'MISMATCH', conf:.95, date:'Sep 19, 2026', time:'14:05',
+    body:'Quick one — the consignee on draft BL 559102 does not look like the entity on our SI. Please run the check and flag the difference.',
+    atts:[ doc('SI_KST559102.pdf','SI','344 KB',7,'extracted'), doc('BL_KST559102.pdf','BL','318 KB',7,'extracted') ],
+    defectFields:['consignee'],
+    si:{shipper:'Kestrel Outdoor Supply AB',consignee:'Brightwave Retail Ltd.',notify_party:'Brightwave Retail Ltd.',port_of_loading:'Gothenburg (SEGOT)',port_of_discharge:'Boston, US (USBOS)',container_count:1,gross_weight_kg:9200},
+    bl:{shipper:'Kestrel Outdoor Supply AB',consignee:'Brightwave Retail GmbH',notify_party:'Brightwave Retail Ltd.',port_of_loading:'Gothenburg (SEGOT)',port_of_discharge:'Boston, US (USBOS)',container_count:1,gross_weight_kg:9200},
+    evidence:[{field:'consignee',doc:'SI',text:'CONSIGNEE: BRIGHTWAVE RETAIL LTD.'},{field:'consignee',doc:'BL',text:'Consignee: Brightwave Retail GmbH'}] },
+
+  { id:'EML-1011', subject:'Please verify draft BL — OOLU4402210', sender:'dchen@orientpearl.cn', from:'David Chen · Orient Pearl',
+    category:'BL_COMPARISON', status:'OK', conf:.98, date:'Sep 19, 2026', time:'09:31',
+    body:'Draft BL OOLU4402210 attached for verification against our SI. We expect a clean match — please confirm so we can issue.',
+    atts:[ doc('SI_OOLU4402210.pdf','SI','398 KB',7,'extracted'), doc('BL_OOLU4402210.pdf','BL','371 KB',7,'extracted') ],
+    defectFields:[],
+    si:{shipper:'Orient Pearl Foods Co.',consignee:'Sunrise Market LLC',notify_party:'Sunrise Market LLC',port_of_loading:'Qingdao (CNTAO)',port_of_discharge:'Los Angeles (USLAX)',container_count:4,gross_weight_kg:31200},
+    bl:{shipper:'Orient Pearl Foods Co.',consignee:'Sunrise Market LLC',notify_party:'Sunrise Market LLC',port_of_loading:'Qingdao (CNTAO)',port_of_discharge:'Los Angeles (USLAX)',container_count:4,gross_weight_kg:31200} },
+
+  { id:'EML-1012', subject:'BL comparison — v2 documents attached', sender:'sramos@andinacargo.pe', from:'Sofia Ramos · Andina Cargo',
+    category:'BL_COMPARISON', status:'ERROR', conf:.31, date:'Sep 18, 2026', time:'18:20',
+    body:'Second attempt sending the documents — the first email may have had a corrupted BL. Please verify the shipment details against our SI.',
+    atts:[ doc('BL_SCAN_final.pdf','BL','0 KB',0,'failed',['[file corrupted — CRC mismatch]']) ],
+    defectFields:[], error:'Attachment corrupted — BL_SCAN_final.pdf could not be decoded (CRC mismatch).',
+    recovered:{
+      si:{shipper:'Andina Cargo SAC',consignee:'Iberia Home SL',notify_party:'Iberia Home SL',port_of_loading:'Callao (PECLL)',port_of_discharge:'Valencia (ESVLC)',container_count:2,gross_weight_kg:19800},
+      bl:{shipper:'Andina Cargo SAC',consignee:'Iberia Home SL',notify_party:'Iberia Home SL',port_of_loading:'Callao (PECLL)',port_of_discharge:'Valencia (ESVLC)',container_count:2,gross_weight_kg:19800} } },
+
+  { id:'EML-1013', subject:'BL check — discharge port discrepancy?', sender:'yusuf@levanthome.tr', from:'Yusuf Demir · Levant Home',
+    category:'BL_COMPARISON', status:'MISMATCH', conf:.93, date:'Sep 18, 2026', time:'13:57',
+    body:'Our SI nominates Felixstowe but the draft BL seems to show Southampton. Please run the comparison and confirm the discharge port.',
+    atts:[ doc('SI_LVL77120.pdf','SI','356 KB',7,'extracted'), doc('BL_LVL77120.pdf','BL','342 KB',7,'extracted') ],
+    defectFields:['port_of_discharge'],
+    si:{shipper:'Alpine Textiles AG',consignee:'Levant Home Living',notify_party:'Levant Home Living',port_of_loading:'Genoa (ITGOA)',port_of_discharge:'Felixstowe, GB (GBFXT)',container_count:2,gross_weight_kg:16750},
+    bl:{shipper:'Alpine Textiles AG',consignee:'Levant Home Living',notify_party:'Levant Home Living',port_of_loading:'Genoa (ITGOA)',port_of_discharge:'Southampton, GB (GBSOU)',container_count:2,gross_weight_kg:16750},
+    evidence:[{field:'port_of_discharge',doc:'SI',text:'PORT OF DISCHARGE: FELIXSTOWE (GBFXT)'},{field:'port_of_discharge',doc:'BL',text:'Port of Discharge: Southampton (GBSOU)'}] },
+
+  { id:'EML-1014', subject:'SI vs BL — weight missing on our SI', sender:'rina@driftwood.co.id', from:'Rina Wijaya · Driftwood',
+    category:'BL_COMPARISON', status:'NEEDS_REVIEW', conf:.71, date:'Sep 18, 2026', time:'10:26',
+    body:'Apologies — we forgot to fill in gross weight on the SI. The draft BL states a figure. Please hold the comparison until we confirm.',
+    atts:[ doc('SI_DWD33019.pdf','SI','310 KB',6,'extracted',['SHIPPER: DRIFTWOOD FURNITURE CO.','CONSIGNEE: CASA MODERNA SA','GROSS WEIGHT: —']), doc('BL_DWD33019.pdf','BL','301 KB',7,'extracted',['Gross Weight: 22,400 kg']) ],
+    defectFields:[], reviewReason:'missing_value',
+    si:{shipper:'Driftwood Furniture Co.',consignee:'Casa Moderna SA',notify_party:'Casa Moderna SA',port_of_loading:'Jakarta (IDJKT)',port_of_discharge:'Santos (BRSSZ)',container_count:6,gross_weight_kg:null},
+    bl:{shipper:'Driftwood Furniture Co.',consignee:'Casa Moderna SA',notify_party:'Casa Moderna SA',port_of_loading:'Jakarta (IDJKT)',port_of_discharge:'Santos (BRSSZ)',container_count:6,gross_weight_kg:22400} },
+];
+
+const initialReviews = [
+  { id:'102', emailId:'EML-1003', reason:'unreadable', confidence:62, received:'09:42',
+    summary:'The BL attachment is a low-resolution scan (41 dpi). OCR recovered only 2 of 7 fields, so the comparison engine cannot verify container_count, consignee or ports.',
+    suggestion:'Re-enter the container count from the paper BL (likely 3 x 40HC), then resolve.',
+    editFields:[{ key:'container_count', label:'Container Count', si:'3', bl:'unreadable', value:'3' }],
+    evidence:[{doc:'SI',tone:'ok',lines:['SHIPPER: EVERGREEN HARDWARE CO. LTD.','CONTAINER COUNT: 3 x 40HC','GROSS WEIGHT: 19,750 KG']},
+              {doc:'BL',tone:'bad',lines:['[scan quality 41 dpi — OCR failed]','Shipper: Evergreen Hardware Co. ???','Recovered fields: 2 / 7']}],
+    timeline:[{t:'09:41',label:'Email received',icon:'mail',state:'done'},{t:'09:42',label:'AI processed — BL_COMPARISON (94%)',icon:'sparkles',state:'done'},{t:'09:42',label:'Issue detected — unreadable document',icon:'alertTriangle',state:'done'},{t:'',label:'Waiting for reviewer',icon:'clock',state:'active'}] },
+  { id:'105', emailId:'EML-1009', reason:'missing_attachment', confidence:58, received:'16:45',
+    summary:'The email requests a BL check but only the Shipping Instruction was attached. The draft BL never arrived — the engine cannot compare without it.',
+    suggestion:'Request the draft BL from the sender, or approve the escalation as-is.',
+    editFields:[],
+    evidence:[{doc:'SI',tone:'ok',lines:['SHIPPER: FJORD LOGISTICS AS','CONSIGNEE: BAFFIN OUTDOOR CO.','CONTAINER COUNT: 2 x 20GP']},
+              {doc:'BL',tone:'bad',lines:['No attachment found','Expected: draft BL for booking FJL-55120']}],
+    timeline:[{t:'16:44',label:'Email received',icon:'mail',state:'done'},{t:'16:45',label:'AI processed — only SI located',icon:'sparkles',state:'done'},{t:'16:45',label:'Issue detected — missing attachment',icon:'paperclip',state:'done'},{t:'',label:'Waiting for reviewer',icon:'clock',state:'active'}] },
+  { id:'107', emailId:'EML-1014', reason:'missing_value', confidence:71, received:'10:27',
+    summary:'The SI does not declare gross weight while the draft BL states 22,400 kg. The engine treats this as missing_value — a human must confirm the intended figure.',
+    suggestion:'Confirm 22,400 kg to release the comparison as OK.',
+    editFields:[{ key:'gross_weight_kg', label:'Gross Weight (kg)', si:'—', bl:'22,400', value:'22400' }],
+    evidence:[{doc:'SI',tone:'warn',lines:['SHIPPER: DRIFTWOOD FURNITURE CO.','CONTAINER COUNT: 6 x 40HC','GROSS WEIGHT: —']},
+              {doc:'BL',tone:'ok',lines:['Shipper: Driftwood Furniture Co.','Container Count: 6','Gross Weight: 22,400 kg']}],
+    timeline:[{t:'10:26',label:'Email received',icon:'mail',state:'done'},{t:'10:27',label:'AI processed — 6/7 SI fields',icon:'sparkles',state:'done'},{t:'10:27',label:'Issue detected — missing_value',icon:'helpCircle',state:'done'},{t:'',label:'Waiting for reviewer',icon:'clock',state:'active'}] },
+];
+
+const CH = {
+  donut: [ ['BL Comparison',340,'#2563EB'], ['SI Request',285,'#06B6D4'], ['Invoice',212,'#8B5CF6'], ['General',283,'#10B981'], ['Spam',130,'#F59E0B'] ],
+  line: {
+    labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
+    processed:[58,72,66,84,91,87,102,118,109,124,131,138],
+    defects:[4,6,3,7,9,5,8,11,6,9,12,10],
+    reviews:[1,2,1,2,3,2,3,4,2,3,4,3],
+  },
+  bar: [ ['Container Count',11,'#2563EB'], ['Gross Weight',8,'#F59E0B'], ['Consignee',5,'#8B5CF6'], ['Ports',4,'#06B6D4'], ['Notify Party',2,'#EF4444'] ],
+  history: [64.2, 71.0, 76.4, 81.2, 84.3, 87.5],
+};
+const EVAL_SCORES = { overall:87.5, classification:92.0, defects:84.0, review:86.5 };
+const PIPELINE = [
+  { icon:'inbox',       label:'Receive',  stat:'1,250', sub:'emails ingested' },
+  { icon:'sparkles',    label:'Classify', stat:'97.2%', sub:'avg confidence' },
+  { icon:'scan',        label:'Extract',  stat:'99.1%', sub:'field recall' },
+  { icon:'gitCompare',  label:'Compare',  stat:'340',   sub:'SI ↔ BL checks' },
+  { icon:'shieldCheck', label:'Decide',   stat:'87.8%', sub:'auto-resolved' },
+];
+
+/* ================================================================
+   src/lib/utils.ts
+   ================================================================ */
+const cx = (...a) => a.filter(Boolean).join(' ');
+const fmt = (n) => n.toLocaleString('en-US');
+const valFmt = (key, v) => {
+  if (v === null || v === undefined) return '—';
+  if (key === 'gross_weight_kg') return fmt(v) + ' kg';
+  return String(v);
+};
+const fieldLabel = (key) => (FIELDS.find(f => f.key === key) || {}).label || key;
+const ageDays = (e) => (new Date('2026-09-21T23:59:59') - new Date(e.date)) / 86400000;
+
+/* ================================================================
+   src/lib/motion.tsx
+   ================================================================ */
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+function M({ as='div', from={}, to={}, dur=0.55, delay=0, style, className, children, ...rest }) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => setOn(true)));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const st = Object.assign({}, style, on ? to : from, { transition: `all ${dur}s ${EASE} ${delay}s` });
+  return React.createElement(as, Object.assign({ className, style: st }, rest), children);
+}
+function useCountUp(target, { duration=1200, decimals=0, delay=0 } = {}) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let raf; const t0 = performance.now() + delay;
+    const tick = (now) => {
+      if (now < t0) { raf = requestAnimationFrame(tick); return; }
+      const p = Math.min(1, (now - t0) / duration);
+      setVal(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return decimals ? Number(val.toFixed(decimals)) : Math.round(val);
+}
+function ExitRow({ exiting, children }) {
+  const ref = useRef(null);
+  const [h, setH] = useState('auto');
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    if (exiting && ref.current) {
+      setH(ref.current.offsetHeight);
+      const r1 = requestAnimationFrame(() => requestAnimationFrame(() => setP(1)));
+      return () => cancelAnimationFrame(r1);
+    }
+  }, [exiting]);
+  const style = p
+    ? { height:0, opacity:0, transform:'translateX(48px) scale(.98)', overflow:'hidden', marginTop:0, transition:`all .45s ${EASE}` }
+    : exiting ? { height:h, overflow:'hidden', transition:`all .45s ${EASE}` } : {};
+  return <div ref={ref} style={style}>{children}</div>;
+}
+
+/* ================================================================
+   src/components/icons.tsx
+   ================================================================ */
+const ICON_PATHS = {
+  dashboard: <><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></>,
+  mail: <><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></>,
+  inbox: <><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></>,
+  clipboardCheck: <><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></>,
+  gauge: <><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0Z"/></>,
+  settings: <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
+  search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
+  bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>,
+  chevronDown: <path d="m6 9 6 6 6-6"/>,
+  chevronUp: <path d="m18 15-6-6-6 6"/>,
+  chevronRight: <path d="m9 18 6-6-6-6"/>,
+  chevronLeft: <path d="m15 18-6-6 6-6"/>,
+  check: <path d="M20 6 9 17l-5-5"/>,
+  x: <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
+  alertTriangle: <><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>,
+  alertCircle: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+  rotateCcw: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>,
+  refresh: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></>,
+  download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
+  upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
+  fileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
+  files: <><path d="M20 7h-3a2 2 0 0 1-2-2V2"/><path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l5 5v9a2 2 0 0 1-2 2Z"/><path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"/></>,
+  shieldCheck: <><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></>,
+  sparkles: <><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>,
+  zap: <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>,
+  trendingUp: <><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></>,
+  user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+  userCheck: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></>,
+  logOut: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
+  filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>,
+  clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+  eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
+  arrowRight: <><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>,
+  arrowLeft: <><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></>,
+  scale: <><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></>,
+  gitCompare: <><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/></>,
+  box: <><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></>,
+  anchor: <><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></>,
+  mapPin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>,
+  building: <><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></>,
+  flag: <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>,
+  checkCircle: <><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>,
+  xCircle: <><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></>,
+  helpCircle: <><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></>,
+  send: <><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>,
+  pencil: <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>,
+  paperclip: <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>,
+  activity: <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>,
+  cpu: <><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></>,
+  wifi: <><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></>,
+  receipt: <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></>,
+  code: <><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></>,
+  play: <polygon points="6 3 20 12 6 21 6 3"/>,
+  loader: <path d="M21 12a9 9 0 1 1-6.219-8.56"/>,
+  externalLink: <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>,
+  lock: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
+  scan: <><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></>,
+  info: <><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>,
+  database: <><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></>,
+  menu: <><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></>,
+};
+function Icon({ name, size=18, className='', strokeWidth=2 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      {ICON_PATHS[name] || ICON_PATHS.info}
+    </svg>
+  );
+}
+/* Official Google "G" mark for the SSO button */
+function GoogleG({ size=18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47a5.57 5.57 0 0 1-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09A11.99 11.99 0 0 0 12 24z"/>
+      <path fill="#FBBC05" d="M5.27 14.29A7.2 7.2 0 0 1 4.89 12c0-.8.14-1.57.38-2.29V6.62H1.29a11.99 11.99 0 0 0 0 10.76l3.98-3.09z"/>
+      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/>
+    </svg>
+  );
+}
+
+/* ================================================================
+   src/components/Logo.tsx
+   ================================================================ */
+function LogoMark({ size=40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className="shrink-0">
+      <defs>
+        <linearGradient id="lgCh" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#2563EB"/><stop offset="1" stopColor="#22D3EE"/>
+        </linearGradient>
+        <linearGradient id="lgCir" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#1E3A8A"/><stop offset="1" stopColor="#2563EB"/>
+        </linearGradient>
+      </defs>
+      <path d="M14 12 6 24l8 12" stroke="url(#lgCh)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M34 12l8 12-8 12" stroke="url(#lgCh)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="24" cy="24" r="13" fill="url(#lgCir)"/>
+      <rect x="18.5" y="17.5" width="3.4" height="3.4" rx=".7" fill="#fff"/>
+      <rect x="22.6" y="15.6" width="3.4" height="5.3" rx=".7" fill="#93C5FD"/>
+      <rect x="26.7" y="17.5" width="3.4" height="3.4" rx=".7" fill="#fff"/>
+      <path d="M16.6 24.4h14.8l-2.4 4.4h-10z" fill="#fff"/>
+      <path d="M17.5 31.6c2.2 0 2.2 1.4 4.4 1.4s2.2-1.4 4.4-1.4 2.2 1.4 4.3 1.4" stroke="#67E8F9" strokeWidth="1.7" strokeLinecap="round" fill="none"/>
+      <path d="M33.5 12.5a15 15 0 0 1 3.2 8.5" stroke="#22D3EE" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+      <circle cx="35.2" cy="13.6" r="1.9" fill="#67E8F9"/>
+      <path d="m27.8 13.6 1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#fff"/>
+    </svg>
+  );
+}
+function Wordmark({ size='md', light=false }) {
+  const big = size === 'lg';
+  return (
+    <span className={cx('font-display font-bold tracking-tight leading-none whitespace-nowrap select-none',
+      big ? 'text-4xl' : 'text-[17px]', light ? 'text-white' : 'text-navy-900')}>
+      {PRODUCT.name}<span className="text-grad">{PRODUCT.suffix}</span>
+    </span>
+  );
+}
+function Logo({ size='md', light=false, sub=false, subText }) {
+  const big = size === 'lg';
+  return (
+    <div className="flex items-center gap-2.5 min-w-0">
+      <LogoMark size={big ? 52 : 34}/>
+      <div className="leading-tight min-w-0">
+        <Wordmark size={size} light={light}/>
+        {sub &&
+          <div className={cx('text-[9.5px] font-bold uppercase tracking-[0.16em] mt-1 truncate',
+            light ? 'text-white/50' : 'text-slate-400')}>
+            {subText || PRODUCT.sub}
+          </div>}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/components/ui.tsx
+   ================================================================ */
+
+/* ---- TextField: icon / text / trailing each in their own flex cell.
+   Physically impossible for the icon to overlap typed or placeholder text. ---- */
+function TextField({ icon, trailing, compact=false, className='', ...inputProps }) {
+  return (
+    <div className={cx('flex items-stretch rounded-xl border border-slate-200 bg-white transition-all duration-200',
+      'focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-500/10 overflow-hidden', className)}>
+      {icon &&
+        <span className="flex items-center pl-3.5 pr-2.5 text-slate-300 pointer-events-none shrink-0" aria-hidden="true">{icon}</span>}
+      <input
+        className={cx('flex-1 min-w-0 bg-transparent border-0 text-sm text-ink-800 placeholder-slate-400 outline-none',
+          compact ? 'py-2' : 'py-2.5',
+          icon ? 'pl-0' : 'pl-3.5',
+          trailing ? 'pr-1.5' : 'pr-3.5')}
+        {...inputProps}/>
+      {trailing &&
+        <span className="flex items-center pr-2.5 pl-0.5 shrink-0">{trailing}</span>}
+    </div>
+  );
+}
+
+function Ring({ value, size=170, thickness=13, from='#22D3EE', to='#60A5FA', track='rgba(255,255,255,.12)', delay=250, dur=1300, children }) {
+  const [v, setV] = useState(0);
+  const gid = useMemo(() => 'ring' + Math.random().toString(36).slice(2), []);
+  useEffect(() => {
+    let raf; const t0 = performance.now() + delay;
+    const tick = (now) => {
+      if (now < t0) { raf = requestAnimationFrame(tick); return; }
+      const p = Math.min(1, (now - t0) / dur);
+      setV(value * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  const r = (size - thickness) / 2, c = 2 * Math.PI * r;
+  return (
+    <div className="relative shrink-0" style={{ width:size, height:size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <defs><linearGradient id={gid} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={from}/><stop offset="100%" stopColor={to}/></linearGradient></defs>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={track} strokeWidth={thickness}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={`url(#${gid})`} strokeWidth={thickness} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c - (c * v) / 100}/>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        {typeof children === 'function' ? children(v) : children}
+      </div>
+    </div>
+  );
+}
+function Spark({ data, color, w=72, h=22 }) {
+  const max = Math.max(...data), min = Math.min(...data);
+  const pts = data.map((d,i) => `${(i/(data.length-1))*w},${h-3-((d-min)/((max-min)||1))*(h-7)}`).join(' ');
+  return (
+    <svg width={w} height={h} className="shrink-0">
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity=".85"/>
+    </svg>
+  );
+}
+function StatusBadge({ status, size='md' }) {
+  const s = STATUS[status] || STATUS.PROCESSED;
+  const sm = size === 'sm';
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full font-bold whitespace-nowrap shrink-0"
+      style={{ background:s.bg, color:s.color, padding: sm ? '3px 9px' : '4.5px 11px', fontSize: sm ? 11 : 12 }}>
+      <Icon name={s.icon} size={sm ? 12 : 13} strokeWidth={2.4}/>{s.label}
+    </span>
+  );
+}
+function CategoryBadge({ cat }) {
+  const c = CATEGORIES[cat] || CATEGORIES.GENERAL;
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11.5px] font-bold whitespace-nowrap shrink-0"
+      style={{ background:c.color + '14', color:c.color }}>
+      <Icon name={c.icon} size={12.5} strokeWidth={2.4}/>{c.label}
+    </span>
+  );
+}
+function ConfBar({ v }) {
+  const c = v >= .9 ? '#10B981' : v >= .7 ? '#F59E0B' : '#EF4444';
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-14 h-1.5 rounded-full bg-slate-100 overflow-hidden shrink-0">
+        <div className="h-full rounded-full" style={{ width:`${Math.round(v*100)}%`, background:c }}/>
+      </div>
+      <span className="text-[12px] font-bold tabular-nums whitespace-nowrap" style={{ color:c }}>{Math.round(v*100)}%</span>
+    </div>
+  );
+}
+function AIConfidenceBadge({ conf }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold text-white bg-gradient-to-r from-ai-500 to-brand-500 shadow-glowAi whitespace-nowrap shrink-0">
+      <Icon name="sparkles" size={12} strokeWidth={2.4}/>{Math.round(conf*100)}% confidence
+    </span>
+  );
+}
+function MetricCard({ icon, tint, label, value, delta, deltaTone='good', note, spark, sparkColor, delay=0 }) {
+  const v = useCountUp(value, { delay: 350 + delay, duration: 1100 });
+  const tone = deltaTone === 'good' ? { bg:'#ECFDF5', fg:'#059669', icon:'trendingUp' }
+             : deltaTone === 'bad'  ? { bg:'#FEF2F2', fg:'#DC2626', icon:'trendingUp' }
+             : { bg:'#F1F5F9', fg:'#475569', icon:'activity' };
+  return (
+    <M from={{opacity:0, transform:'translateY(18px)'}} to={{opacity:1, transform:'none'}} delay={delay}>
+      <div className="card p-5 relative overflow-hidden group hover:shadow-lift hover:-translate-y-1 transition-all duration-300 h-full">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-transparent via-brand-400/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"/>
+        <div className="flex items-start justify-between gap-2">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background:tint.bg, color:tint.c }}>
+            <Icon name={icon} size={19} strokeWidth={2.2}/>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold whitespace-nowrap" style={{ background:tone.bg, color:tone.fg }}>
+            <Icon name={tone.icon} size={11} strokeWidth={2.6}/>{delta}
+          </span>
+        </div>
+        <div className="mt-4 text-[12px] font-semibold text-slate-400 truncate">{label}</div>
+        <div className="mt-0.5 flex items-end justify-between gap-2 min-w-0">
+          <div className="font-display text-[26px] font-bold text-navy-900 leading-none tabular-nums truncate">{fmt(v)}</div>
+          <Spark data={spark} color={sparkColor}/>
+        </div>
+        <div className="mt-1.5 text-[11px] text-slate-400 truncate">{note}</div>
+      </div>
+    </M>
+  );
+}
+function ChartCard({ title, sub, children, delay=0, className='' }) {
+  return (
+    <M from={{opacity:0, transform:'translateY(20px)'}} to={{opacity:1, transform:'none'}} delay={delay} className={cx('card p-5', className)}>
+      <div className="mb-4">
+        <h3 className="font-bold text-[15px] text-navy-900">{title}</h3>
+        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+      </div>
+      {children}
+    </M>
+  );
+}
+function LoadingAnimation({ size=56, label }) {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative" style={{ width:size, height:size }}>
+        <div className="absolute inset-0 rounded-full border-2 border-ai-300/60 animate-ping"/>
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ai-400 via-brand-500 to-aqua-400 opacity-90 flex items-center justify-center text-white animate-pulse">
+          <Icon name="sparkles" size={size*0.4} strokeWidth={2}/>
+        </div>
+      </div>
+      {label && <div className="text-[12.5px] font-semibold text-slate-500 text-center">{label}</div>}
+    </div>
+  );
+}
+function EmptyState({ icon='inbox', tint='#2563EB', title, sub, action }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-14 px-6">
+      <div className="relative mb-5">
+        <div className="absolute inset-0 rounded-3xl blur-xl opacity-30 pointer-events-none" style={{ background:tint }}/>
+        <div className="relative w-16 h-16 rounded-3xl flex items-center justify-center" style={{ background:tint+'18', color:tint }}>
+          <Icon name={icon} size={30} strokeWidth={1.8}/>
+        </div>
+      </div>
+      <h3 className="font-display text-lg font-bold text-navy-900">{title}</h3>
+      {sub && <p className="text-sm text-slate-400 mt-1.5 max-w-sm">{sub}</p>}
+      {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+function ErrorState({ title='Unable to process document', reason, onRetry, busy }) {
+  return (
+    <div className="rounded-2xl border border-red-100 bg-gradient-to-b from-red-50/70 to-white p-6 text-center">
+      <div className="w-14 h-14 mx-auto rounded-2xl bg-red-100/70 text-red-500 flex items-center justify-center">
+        <Icon name="alertTriangle" size={26} strokeWidth={2}/>
+      </div>
+      <h3 className="font-display text-lg font-bold text-red-900 mt-4">{title}</h3>
+      <p className="text-[13px] text-red-500/90 mt-1.5 max-w-sm mx-auto">{reason}</p>
+      {onRetry &&
+        <button className="btn-danger-o mt-5" onClick={onRetry} disabled={busy}>
+          {busy ? <Icon name="loader" size={15} className="animate-spin"/> : <Icon name="rotateCcw" size={15}/>}
+          {busy ? 'Retrying…' : 'Retry processing'}
+        </button>}
+    </div>
+  );
+}
+function Switch({ on, onChange }) {
+  return (
+    <button onClick={() => onChange(!on)}
+      className={cx('relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0', on ? 'bg-gradient-to-r from-brand-500 to-aqua-500' : 'bg-slate-200')}>
+      <span className={cx('absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200', on && 'translate-x-5')}/>
+    </button>
+  );
+}
+function SettingRow({ title, desc, on, onChange }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3.5 border-b border-slate-100 last:border-0">
+      <div className="min-w-0">
+        <div className="text-[13.5px] font-semibold text-ink-800">{title}</div>
+        <div className="text-[12px] text-slate-400 mt-0.5">{desc}</div>
+      </div>
+      <Switch on={on} onChange={onChange}/>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/components/charts.ts
+   ================================================================ */
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#5E7398';
+const TOOLTIP = { backgroundColor:'#0B1526', padding:12, cornerRadius:10, titleFont:{ weight:'700' }, bodySpacing:6, boxPadding:6 };
+
+function ChartCanvas({ build }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const chart = build(ref.current);
+    return () => chart.destroy();
+  }, []);
+  return <canvas ref={ref}/>;
+}
+function buildDonut(canvas) {
+  const d = CH.donut, total = d.reduce((s,x)=>s+x[1],0);
+  return new Chart(canvas, {
+    type:'doughnut',
+    data:{ labels:d.map(x=>x[0]), datasets:[{ data:d.map(x=>x[1]), backgroundColor:d.map(x=>x[2]),
+      borderWidth:3, borderColor:'#fff', hoverOffset:8, borderRadius:8, spacing:3 }] },
+    options:{ cutout:'72%', maintainAspectRatio:false, layout:{ padding:6 },
+      plugins:{ legend:{ display:false },
+        tooltip:{ ...TOOLTIP, displayColors:false, callbacks:{ label:(c)=>` ${c.parsed} emails · ${((c.parsed/total)*100).toFixed(1)}%` } } } },
+  });
+}
+function buildLine(canvas) {
+  const ctx = canvas.getContext('2d');
+  const fill = (rgb) => { const g = ctx.createLinearGradient(0,0,0,240); g.addColorStop(0,`rgba(${rgb},.20)`); g.addColorStop(1,`rgba(${rgb},0)`); return g; };
+  const L = CH.line;
+  return new Chart(canvas, {
+    type:'line',
+    data:{ labels:L.labels, datasets:[
+      { label:'Documents processed', data:L.processed, borderColor:'#2563EB', backgroundColor:fill('37,99,235'), fill:true },
+      { label:'Defects detected', data:L.defects, borderColor:'#EF4444', backgroundColor:fill('239,68,68'), fill:false },
+      { label:'Reviews completed', data:L.reviews, borderColor:'#8B5CF6', backgroundColor:fill('139,92,246'), fill:false },
+    ]},
+    options:{ maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ position:'top', align:'end', labels:{ usePointStyle:true, pointStyle:'circle', boxWidth:7, boxHeight:7, padding:14, font:{ size:11, weight:'600' } } },
+        tooltip:TOOLTIP },
+      scales:{ x:{ grid:{ display:false }, border:{ display:false }, ticks:{ font:{ size:10.5 } } },
+        y:{ beginAtZero:true, grid:{ color:'rgba(94,115,152,.10)' }, border:{ display:false }, ticks:{ font:{ size:10.5 }, maxTicksLimit:6, padding:6 } } },
+      elements:{ line:{ tension:.45, borderWidth:2.5 }, point:{ radius:0, hitRadius:12, hoverRadius:5, hoverBorderWidth:2, hoverBorderColor:'#fff' } } },
+  });
+}
+function buildBar(canvas) {
+  const d = CH.bar;
+  return new Chart(canvas, {
+    type:'bar',
+    data:{ labels:d.map(x=>x[0]), datasets:[{ data:d.map(x=>x[1]), backgroundColor:d.map(x=>x[2]), borderRadius:7, barThickness:16 }] },
+    options:{ indexAxis:'y', maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ ...TOOLTIP, displayColors:false, callbacks:{ label:(c)=>` ${c.parsed.x} defects detected` } } },
+      scales:{ x:{ beginAtZero:true, grid:{ color:'rgba(94,115,152,.10)' }, border:{ display:false }, ticks:{ precision:0, font:{ size:10.5 } } },
+        y:{ grid:{ display:false }, border:{ display:false }, ticks:{ font:{ size:11.5, weight:'600' }, color:'#33445E' } } } },
+  });
+}
+function buildHistory(canvas) {
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0,0,0,140); g.addColorStop(0,'rgba(139,92,246,.25)'); g.addColorStop(1,'rgba(139,92,246,0)');
+  return new Chart(canvas, {
+    type:'line',
+    data:{ labels:['v0','v1','v2','v3','v4','v5'], datasets:[{ data:CH.history, borderColor:'#8B5CF6', backgroundColor:g, fill:true,
+      pointBackgroundColor:'#8B5CF6', pointRadius:3, pointHoverRadius:5 }] },
+    options:{ maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:TOOLTIP },
+      scales:{ x:{ grid:{ display:false }, border:{ display:false }, ticks:{ font:{ size:10 } } },
+        y:{ grid:{ color:'rgba(94,115,152,.10)' }, border:{ display:false }, ticks:{ font:{ size:10 }, maxTicksLimit:4 } } },
+      elements:{ line:{ tension:.4, borderWidth:2.5 } } },
+  });
+}
+
+/* ================================================================
+   src/components/Toaster.tsx
+   ================================================================ */
+const TOAST_META = {
+  success: { icon:'checkCircle',  c:'#10B981' },
+  danger:  { icon:'xCircle',      c:'#EF4444' },
+  warn:    { icon:'alertTriangle',c:'#F59E0B' },
+  info:    { icon:'info',         c:'#2563EB' },
+  ai:      { icon:'sparkles',     c:'#8B5CF6' },
+};
+function Toaster({ toasts, dismiss }) {
+  return (
+    <div className="fixed bottom-5 right-5 z-[80] flex flex-col gap-3 w-[340px] max-w-[calc(100vw-40px)]">
+      {toasts.map(t => {
+        const m = TOAST_META[t.type] || TOAST_META.info;
+        return (
+          <M key={t.id} from={{ opacity:0, transform:'translateX(60px) scale(.96)' }} to={{ opacity:1, transform:'none' }} dur={.35}
+             className="card p-4 flex items-start gap-3 shadow-lift relative overflow-hidden">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background:m.c+'18', color:m.c }}>
+              <Icon name={m.icon} size={16} strokeWidth={2.3}/>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-bold text-ink-900 leading-snug">{t.title}</div>
+              {t.desc && <div className="text-[12px] text-slate-500 mt-0.5 leading-snug">{t.desc}</div>}
+            </div>
+            <button onClick={() => dismiss(t.id)} className="text-slate-300 hover:text-slate-500 transition-colors shrink-0"><Icon name="x" size={14}/></button>
+            <div className="absolute bottom-0 left-0 h-[3px] rounded-full toastbar pointer-events-none" style={{ background:m.c }}/>
+          </M>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================================================================
+   src/pages/LoginPage.tsx — flex-cell fields + Continue with Google
+   ================================================================ */
+function LoginPage({ onLogin }) {
+  const [form, setForm] = useState({ user:'', pass:'' });
+  const [show, setShow] = useState(false);
+  const [state, setState] = useState('idle'); // idle | error | loading | gloading | success
+  const particles = useMemo(() => Array.from({ length:22 }, () => ({
+    left: Math.random()*100, top: Math.random()*100, s: 2+Math.random()*3,
+    d: 5+Math.random()*9, delay: Math.random()*6, o: .18+Math.random()*.4,
+  })), []);
+  const busy = state === 'loading' || state === 'gloading' || state === 'success';
+  const submit = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    if (!form.user || !form.pass) { setState('error'); return; }
+    setState('loading');
+    let token = null;
+    try {
+      const r = await apiLogin(form.user, form.pass);
+      token = r.token;
+    } catch (err) {
+      // Backend unreachable or credentials rejected — fall back to the
+      // bundled offline demo so a live-demo booth never gets stuck here.
+    }
+    setTimeout(() => setState('success'), 500);
+    setTimeout(() => onLogin(token), 1100);
+  };
+  const google = () => {
+    if (busy) return;
+    setState('gloading');
+    setTimeout(() => setState('success'), 900);
+    setTimeout(() => onLogin(null), 1600);
+  };
+  return (
+    <div className="min-h-screen flex bg-white">
+      {/* ============ Left: brand panel ============ */}
+      <div className="hidden lg:flex flex-1 relative overflow-hidden"
+        style={{ background:'linear-gradient(130deg,#081426 0%,#0E2039 38%,#123A66 68%,#0C4A6E 100%)' }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage:'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize:'34px 34px' }}/>
+        <div className="absolute -top-32 -left-32 w-[460px] h-[460px] rounded-full blur-3xl opacity-40 animate-drift pointer-events-none" style={{ background:'radial-gradient(circle,#2563EB55,transparent 65%)' }}/>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-3xl opacity-40 animate-drift pointer-events-none" style={{ background:'radial-gradient(circle,#06B6D455,transparent 65%)', animationDelay:'-6s' }}/>
+        <div className="absolute top-[14%] right-[6%] w-[320px] h-[320px] rounded-full border border-dashed border-white/10 animate-spinSlow pointer-events-none"/>
+        <svg className="absolute inset-0 w-full h-full opacity-70 pointer-events-none" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice" fill="none">
+          <defs>
+            <linearGradient id="rg1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#22D3EE" stopOpacity="0"/><stop offset=".5" stopColor="#22D3EE"/><stop offset="1" stopColor="#22D3EE" stopOpacity="0"/></linearGradient>
+            <linearGradient id="rg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#60A5FA" stopOpacity="0"/><stop offset=".5" stopColor="#60A5FA"/><stop offset="1" stopColor="#60A5FA" stopOpacity="0"/></linearGradient>
+          </defs>
+          <path d="M-40 470 C 200 380, 300 180, 620 210 S 950 320, 1000 260" stroke="url(#rg1)" strokeWidth="1.6" className="dash-anim" opacity=".5"/>
+          <path d="M-40 300 C 180 260, 420 380, 700 300 S 900 180, 1000 210" stroke="url(#rg2)" strokeWidth="1.4" className="dash-anim" style={{ animationDuration:'1.9s' }} opacity=".4"/>
+          <path d="M60 620 C 220 480, 480 520, 640 380 S 860 240, 980 140" stroke="url(#rg1)" strokeWidth="1.2" className="dash-anim" style={{ animationDuration:'2.3s' }} opacity=".35"/>
+          {[[620,210],[700,300],[640,380],[980,140],[300,286]].map(([x,y],i) => (
+            <g key={i}>
+              <circle cx={x} cy={y} r="10" fill="#22D3EE" opacity=".16" className="node-ping" style={{ animationDelay:`${i*.5}s` }}/>
+              <circle cx={x} cy={y} r="4" fill="#67E8F9"/>
+            </g>
+          ))}
+        </svg>
+        {particles.map((p,i) => (
+          <div key={i} className="particle" style={{ left:p.left+'%', top:p.top+'%', width:p.s, height:p.s, opacity:p.o, animationDuration:p.d+'s', animationDelay:p.delay+'s' }}/>
+        ))}
+
+        <div className="relative z-10 h-full flex flex-col justify-between p-12 max-w-2xl">
+          <M from={{opacity:0, y:-14}} to={{opacity:1, y:0}} delay={.1}><Logo size="lg" light/></M>
+
+          <div>
+            <M from={{opacity:0, y:22}} to={{opacity:1, y:0}} delay={.25}>
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 backdrop-blur px-3.5 py-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-aqua-300 animate-pulseDot"/>
+                <span className="text-[11px] font-bold tracking-wide text-aqua-300 uppercase">Averis × Monash Hackathon 2026</span>
+              </div>
+            </M>
+            <M from={{opacity:0, y:22}} to={{opacity:1, y:0}} delay={.4}>
+              <h1 className="font-display text-[42px] leading-[1.1] font-bold text-white mt-5">
+                Intelligent document verification<br/>for <span className="text-grad-l">global shipping.</span>
+              </h1>
+            </M>
+            <M from={{opacity:0, y:22}} to={{opacity:1, y:0}} delay={.55}>
+              <p className="text-white/60 text-[15px] leading-relaxed mt-4 max-w-lg">
+                The engine reads your inbox, classifies every email, extracts SI &amp; BL shipment fields, and catches discrepancies before a draft Bill of Lading is finalized.
+              </p>
+            </M>
+            <M from={{opacity:0, y:22}} to={{opacity:1, y:0}} delay={.7}>
+              <div className="flex flex-col gap-3 mt-7 max-w-md">
+                {[
+                  ['shieldCheck','Human-in-the-loop by design'],
+                  ['gitCompare','Seven-field SI ↔ BL comparison'],
+                  ['zap','Decisions in seconds, not hours'],
+                ].map(([ic,t]) => (
+                  <div key={t} className="flex items-center gap-3 text-[13px] font-semibold text-white/80">
+                    <span className="w-8 h-8 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center text-aqua-300 shrink-0"><Icon name={ic} size={14}/></span>
+                    {t}
+                  </div>
+                ))}
+              </div>
+            </M>
+          </div>
+
+          <M from={{opacity:0}} to={{opacity:1}} delay={.9}>
+            <div className="border-t border-white/10 pt-6">
+              <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
+                {[['98.4%','Processing accuracy'],['3.2s','Avg. decision time'],['340','BL checks / week']].map(([v,l]) => (
+                  <div key={l}>
+                    <div className="font-display text-2xl font-bold text-white">{v}</div>
+                    <div className="text-[11px] text-white/50 mt-0.5">{l}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 text-[10.5px] text-white/30 tracking-wide uppercase">{PRODUCT.pillars.join('  ·  ')}</div>
+            </div>
+          </M>
+        </div>
+      </div>
+
+      {/* ============ Right: sign-in ============ */}
+      <div className="w-full lg:w-[480px] flex items-center justify-center p-8 relative"
+        style={{ background:'radial-gradient(70% 50% at 50% 0%, #EFF6FF 0%, #fff 70%)' }}>
+        <M from={{opacity:0, y:24}} to={{opacity:1, y:0}} delay={.3} className="w-full max-w-sm">
+          <div className="lg:hidden mb-8"><Logo sub subText={PRODUCT.subShort}/></div>
+          <div className="hidden lg:flex items-center gap-2.5 mb-10"><LogoMark size={34}/><Wordmark/></div>
+
+          <h2 className="font-display text-[26px] font-bold text-navy-900">Welcome back</h2>
+          <p className="text-sm text-slate-400 mt-1.5">Sign in to the verification console.</p>
+
+          <form onSubmit={submit} className={cx('mt-8 space-y-4', state === 'error' && 'animate-shakeX')}>
+            <div>
+              <label className="text-[12px] font-bold text-ink-700 uppercase tracking-wide">Username</label>
+              <div className="mt-1.5">
+                <TextField icon={<Icon name="user" size={16}/>} placeholder="ops.manager@nooutput.ai"
+                  autoComplete="username" value={form.user}
+                  onChange={e => setForm({ ...form, user:e.target.value })}/>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-[12px] font-bold text-ink-700 uppercase tracking-wide">Password</label>
+                <button type="button" className="text-[11.5px] font-semibold text-brand-500 hover:text-brand-600">Forgot?</button>
+              </div>
+              <div className="mt-1.5">
+                <TextField type={show ? 'text' : 'password'} icon={<Icon name="lock" size={16}/>}
+                  placeholder="••••••••" autoComplete="current-password" value={form.pass}
+                  onChange={e => setForm({ ...form, pass:e.target.value })}
+                  trailing={
+                    <button type="button" onClick={() => setShow(!show)} tabIndex={-1} aria-label="Toggle password visibility"
+                      className="w-8 h-8 -mr-1 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-300 hover:text-slate-500 transition-colors">
+                      <Icon name="eye" size={16}/>
+                    </button>
+                  }/>
+              </div>
+            </div>
+            {state === 'error' &&
+              <div className="flex items-center gap-2 text-[12.5px] font-semibold text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
+                <Icon name="alertCircle" size={15} className="shrink-0"/>Please enter both username and password.
+              </div>}
+            <button type="submit" disabled={busy}
+              className={cx('w-full py-3 text-[15px]', state === 'success' ? 'btn-emerald' : 'btn-primary')}>
+              {state === 'loading' && <><Icon name="loader" size={16} className="animate-spin"/>Signing in…</>}
+              {state === 'success' && <><Icon name="checkCircle" size={16}/>Access granted</>}
+              {(state === 'idle' || state === 'error') && <>Sign In <Icon name="arrowRight" size={16}/></>}
+            </button>
+          </form>
+
+          {/* Divider + Google SSO */}
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"/></div>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400">or continue with</span>
+            </div>
+          </div>
+          <button type="button" onClick={google} disabled={busy}
+            className="btn-ghost w-full py-3 text-[15px]">
+            {state === 'gloading'
+              ? <><Icon name="loader" size={16} className="animate-spin"/>Connecting to Google…</>
+              : state === 'success'
+                ? <><Icon name="checkCircle" size={16}/>Access granted</>
+                : <><GoogleG size={18}/>Continue with Google</>}
+          </button>
+
+          <div className="mt-7 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
+            <span className="h-px flex-1 bg-slate-200"/>Secure enterprise access<span className="h-px flex-1 bg-slate-200"/>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11.5px] font-semibold text-slate-400">
+            <span className="inline-flex items-center gap-1.5"><Icon name="lock" size={13} className="text-emerald-500"/>SSO Ready</span>
+            <span className="inline-flex items-center gap-1.5"><Icon name="shieldCheck" size={13} className="text-brand-500"/>SOC 2</span>
+            <span className="inline-flex items-center gap-1.5"><Icon name="wifi" size={13} className="text-ai-500"/>24/7 Monitoring</span>
+          </div>
+          <div className="mt-6 text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-50 border border-navy-100 px-3 py-1.5 text-[11px] font-semibold text-navy-600">
+              <Icon name="info" size={12} className="shrink-0"/>Demo build — any credentials or Google sign-in works
+            </span>
+          </div>
+        </M>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/layout/Sidebar.tsx
+   ================================================================ */
+const NAV = [
+  { section:'Operations', items:[
+    { id:'dashboard',  label:'Dashboard', icon:'dashboard' },
+    { id:'emails',     label:'Emails',    icon:'inbox' },
+    { id:'reviews',    label:'Reviews',   icon:'clipboardCheck', badgeKey:'pending' },
+  ]},
+  { section:'Intelligence', items:[
+    { id:'evaluation', label:'Evaluation', icon:'gauge' },
+    { id:'settings',   label:'Settings',   icon:'settings' },
+  ]},
+];
+function NavItem({ item, active, onClick, badge }) {
+  return (
+    <button onClick={onClick}
+      className={cx('group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold transition-all duration-200',
+        active ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-glowBrand' : 'text-slate-500 hover:bg-slate-100/80 hover:text-ink-800')}>
+      <Icon name={item.icon} size={17} className={active ? 'text-white shrink-0' : 'text-slate-400 group-hover:text-brand-500 transition-colors shrink-0'}/>
+      <span className="flex-1 text-left truncate">{item.label}</span>
+      {badge > 0 &&
+        <span className={cx('min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0',
+          active ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700')}>{badge}</span>}
+    </button>
+  );
+}
+function SidebarContent({ route, navigate }) {
+  const { reviews, toast } = useApp();
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-5 pt-5 pb-4">
+        <button onClick={() => navigate('dashboard')} className="text-left w-full"><Logo sub subText={PRODUCT.subShort}/></button>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-3 space-y-5">
+        {NAV.map(sec => (
+          <div key={sec.section}>
+            <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">{sec.section}</div>
+            <div className="space-y-1">
+              {sec.items.map(item => (
+                <NavItem key={item.id} item={item} active={route === item.id}
+                  badge={item.badgeKey === 'pending' ? reviews.length : 0}
+                  onClick={() => navigate(item.id)}/>
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+      <div className="p-3">
+        <div className="rounded-2xl p-4 relative overflow-hidden text-white" style={{ background:'linear-gradient(135deg,#0A1A2F,#1E3A8A 60%,#2563EB)' }}>
+          <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-aqua-400/20 blur-2xl pointer-events-none"/>
+          <div className="relative">
+            <div className="flex items-center gap-2 min-w-0">
+              <Icon name="sparkles" size={15} className="text-aqua-300 shrink-0"/>
+              <span className="text-[12.5px] font-bold truncate">{PRODUCT.engine}</span>
+            </div>
+            <div className="text-[10.5px] text-white/55 mt-0.5">Vision + OCR · Hybrid rules fallback</div>
+            <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-white/60"><span>GPU pool</span><span>68%</span></div>
+            <div className="mt-1 h-1.5 rounded-full bg-white/15 overflow-hidden"><div className="h-full w-[68%] rounded-full bg-gradient-to-r from-aqua-400 to-brand-400"/></div>
+            <button onClick={() => toast('Model card', 'Full model documentation ships with the API build.', 'ai')}
+              className="mt-3 text-[11px] font-bold text-aqua-300 hover:text-aqua-100 inline-flex items-center gap-1">
+              Model card <Icon name="chevronRight" size={12}/>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/layout/Topbar.tsx — search rebuilt with TextField
+   ================================================================ */
+const PAGE_TITLES = { dashboard:'Dashboard', emails:'Email Intelligence', detail:'Email Detail', reviews:'Human Review', evaluation:'Evaluation', settings:'Settings' };
+function Topbar({ route, onMenu, onLogout }) {
+  const { navigate, searchSeed, setSearchSeed, toast } = useApp();
+  const [q, setQ] = useState('');
+  const [prof, setProf] = useState(false);
+  const [notif, setNotif] = useState(false);
+  const [unread, setUnread] = useState(3);
+  return (
+    <header className="sticky top-0 z-30 h-16 shrink-0 bg-white/85 backdrop-blur-md border-b border-slate-200/70 flex items-center gap-3 lg:gap-4 px-4 lg:px-6">
+      <button onClick={onMenu} className="lg:hidden w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 shrink-0"><Icon name="menu" size={19}/></button>
+      <div className="hidden md:flex items-center gap-2 text-[13px] min-w-0 shrink">
+        <span className="text-slate-300 font-medium whitespace-nowrap">Console</span>
+        <Icon name="chevronRight" size={13} className="text-slate-300 shrink-0"/>
+        <span className="font-bold text-ink-800 whitespace-nowrap">{PAGE_TITLES[route]}</span>
+      </div>
+      <div className="hidden md:flex w-full max-w-xs ml-2">
+        <TextField compact className="bg-slate-50"
+          icon={<Icon name="search" size={15}/>}
+          placeholder="Search emails, cases…"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { setSearchSeed(q); navigate('emails'); } }}
+          trailing={<kbd className="text-[10px] font-bold text-slate-300 border border-slate-200 rounded-md px-1.5 py-0.5 bg-white pointer-events-none">⌘K</kbd>}/>
+      </div>
+      <div className="flex-1"/>
+      <div className="hidden sm:flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1.5 shrink-0">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulseDot"/>
+        <span className="text-[11.5px] font-bold text-emerald-700 whitespace-nowrap">AI Engine · Online</span>
+      </div>
+      <div className="relative shrink-0">
+        <button onClick={() => { setNotif(!notif); setProf(false); }} className="relative w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+          <Icon name="bell" size={18}/>
+          {unread > 0 && <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">{unread}</span>}
+        </button>
+        {notif && <>
+          <div className="fixed inset-0 z-10" onClick={() => setNotif(false)}/>
+          <M from={{opacity:0, y:-8, scale:.97}} to={{opacity:1, y:0, scale:1}} dur={.25} className="absolute right-0 top-11 z-20 w-80 card p-2 shadow-lift">
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-[13px] font-bold text-ink-900">Notifications</span>
+              <button onClick={() => setUnread(0)} className="text-[11px] font-bold text-brand-500 hover:text-brand-600">Mark all read</button>
+            </div>
+            {[
+              { icon:'xCircle', c:'#EF4444', t:'New mismatch on EML-1001', s:'Container count differs — 2m ago' },
+              { icon:'helpCircle', c:'#F59E0B', t:'Case #102 is waiting for review', s:'Unreadable BL — 18m ago' },
+              { icon:'sparkles', c:'#8B5CF6', t:'Evaluation v5 scored 87.5%', s:'+1.2 vs previous run — 1h ago' },
+            ].map((n,i) => (
+              <div key={i} className={cx('flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 cursor-pointer', unread === 0 && 'opacity-50')}>
+                <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background:n.c+'15', color:n.c }}><Icon name={n.icon} size={15}/></span>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-semibold text-ink-800 truncate">{n.t}</div>
+                  <div className="text-[11px] text-slate-400">{n.s}</div>
+                </div>
+              </div>
+            ))}
+          </M>
+        </>}
+      </div>
+      <div className="w-px h-7 bg-slate-200 shrink-0"/>
+      <div className="relative shrink-0">
+        <button onClick={() => { setProf(!prof); setNotif(false); }} className="flex items-center gap-2.5 rounded-xl pl-1.5 pr-2 py-1.5 hover:bg-slate-100 transition-colors">
+          <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-aqua-500 text-white text-[12px] font-bold flex items-center justify-center shadow-glowBrand shrink-0">AR</span>
+          <span className="hidden xl:block text-left leading-tight min-w-0">
+            <span className="block text-[12.5px] font-bold text-ink-800 whitespace-nowrap">Amelia Rahman</span>
+            <span className="block text-[10.5px] text-slate-400 whitespace-nowrap">Verification Lead</span>
+          </span>
+          <Icon name="chevronDown" size={14} className="text-slate-400 shrink-0"/>
+        </button>
+        {prof && <>
+          <div className="fixed inset-0 z-10" onClick={() => setProf(false)}/>
+          <M from={{opacity:0, y:-8, scale:.97}} to={{opacity:1, y:0, scale:1}} dur={.25} className="absolute right-0 top-12 z-20 w-60 card p-2 shadow-lift">
+            <div className="px-3 py-2.5 border-b border-slate-100">
+              <div className="text-[13px] font-bold text-ink-900">Amelia Rahman</div>
+              <div className="text-[11px] text-slate-400">amelia@nooutput.ai</div>
+            </div>
+            <button onClick={() => { setProf(false); navigate('settings'); }} className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-ink-700 hover:bg-slate-50">
+              <Icon name="user" size={15} className="text-slate-400 shrink-0"/>Profile settings
+            </button>
+            <button onClick={() => { setProf(false); toast('Shortcuts', 'A → approve · R → reject · C → correct (in review)', 'info'); }}
+              className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-ink-700 hover:bg-slate-50">
+              <Icon name="zap" size={15} className="text-slate-400 shrink-0"/>Keyboard shortcuts
+            </button>
+            <div className="h-px bg-slate-100 my-1"/>
+            <button onClick={onLogout} className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-red-500 hover:bg-red-50">
+              <Icon name="logOut" size={15} className="shrink-0"/>Sign out
+            </button>
+          </M>
+        </>}
+      </div>
+    </header>
+  );
+}
+
+/* ================================================================
+   src/pages/Dashboard.tsx
+   ================================================================ */
+function PipelineFlow() {
+  return (
+    <div className="overflow-x-auto -mx-1 px-1">
+      <div className="flex min-w-[560px] mt-6">
+        {PIPELINE.map((s, i) => (
+          <div key={s.label} className="relative flex-1 flex flex-col items-center text-center px-1 min-w-0">
+            {i < PIPELINE.length - 1 &&
+              <div className="absolute top-[19px] hidden md:block pointer-events-none" style={{ left:'calc(50% + 26px)', width:'calc(100% - 52px)' }}>
+                <div className="h-[2px] rounded-full bg-white/15"/>
+                <div className="absolute -top-[3px] w-2 h-2 rounded-full bg-aqua-300 shadow-[0_0_10px_rgba(34,211,238,.95)] animate-flowDot"
+                  style={{ animationDelay:`${i * 0.5}s` }}/>
+              </div>}
+            <M from={{opacity:0, scale:.7}} to={{opacity:1, scale:1}} delay={.15 + i*.12} dur={.4}>
+              <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 backdrop-blur flex items-center justify-center text-aqua-300 shadow-lg">
+                <Icon name={s.icon} size={18}/>
+              </div>
+            </M>
+            <div className="mt-2.5 text-[11px] font-bold tracking-wide text-white/85 uppercase">{s.label}</div>
+            <div className="font-display text-[17px] font-bold text-white mt-0.5">{s.stat}</div>
+            <div className="text-[10px] text-white/45">{s.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function LiveFeed() {
+  const pool = useMemo(() => [
+    { icon:'mail', c:'#2563EB', text:'Email received — freight@nordwind-line.de' },
+    { icon:'sparkles', c:'#8B5CF6', text:'EML-1015 classified as BL_COMPARISON (96%)' },
+    { icon:'checkCircle', c:'#10B981', text:'EML-1002 verified — all 7 fields match' },
+    { icon:'xCircle', c:'#EF4444', text:'EML-1004 mismatch — gross_weight_kg' },
+    { icon:'userCheck', c:'#F59E0B', text:'Case #105 escalated to human review' },
+    { icon:'scan', c:'#06B6D4', text:'OCR pass complete — SI_4412.pdf (7/7 fields)' },
+    { icon:'download', c:'#64748B', text:'submission.json regenerated for evaluation' },
+  ], []);
+  const [items, setItems] = useState(() => pool.slice(0,4).map((p,i) => ({ ...p, k:i, at: Date.now() - (i+1)*26000 })));
+  const idx = useRef(4);
+  useEffect(() => {
+    const t = setInterval(() => {
+      setItems(prev => [{ ...pool[idx.current++ % pool.length], k: Math.random(), at: Date.now() }, ...prev].slice(0,6));
+    }, 3400);
+    return () => clearInterval(t);
+  }, []);
+  const ago = (t) => { const s = Math.max(1, Math.round((Date.now()-t)/1000)); return s < 60 ? `${s}s ago` : `${Math.round(s/60)}m ago`; };
+  return (
+    <div className="space-y-1">
+      {items.map(it => (
+        <M key={it.k} from={{opacity:0, transform:'translateY(-10px)'}} to={{opacity:1, transform:'none'}} dur={.4}
+          className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-white/5 transition-colors">
+          <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background:it.c+'26', color:it.c }}>
+            <Icon name={it.icon} size={13.5}/>
+          </span>
+          <div className="min-w-0">
+            <div className="text-[12px] font-semibold text-white/85 leading-snug">{it.text}</div>
+            <div className="text-[10px] text-white/35 mt-0.5">{ago(it.at)}</div>
+          </div>
+        </M>
+      ))}
+    </div>
+  );
+}
+function DashboardPage() {
+  const { emails, navigate, openUpload, toast } = useApp();
+  const attention = useMemo(() => emails.filter(e => ['MISMATCH','NEEDS_REVIEW','ERROR'].includes(e.status)).slice(0,5), [emails]);
+  const kpis = [
+    { icon:'inbox', tint:{ c:'#2563EB', bg:'#EFF6FF' }, label:'Total Emails', value:1250, delta:'+8.2%', tone:'good', note:'vs last week', spark:[42,48,45,58,62,60,72], color:'#2563EB' },
+    { icon:'gitCompare', tint:{ c:'#06B6D4', bg:'#ECFEFF' }, label:'BL Comparisons', value:340, delta:'+4.6%', tone:'good', note:'vs last week', spark:[18,22,20,26,24,30,34], color:'#06B6D4' },
+    { icon:'checkCircle', tint:{ c:'#10B981', bg:'#ECFDF5' }, label:'Successful Matches', value:298, delta:'87.6%', tone:'good', note:'match rate', spark:[52,55,54,60,63,62,68], color:'#10B981' },
+    { icon:'userCheck', tint:{ c:'#8B5CF6', bg:'#F5F3FF' }, label:'Human Reviews', value:12, delta:'+3', tone:'neutral', note:'pending in queue', spark:[2,3,2,4,3,5,3], color:'#8B5CF6' },
+    { icon:'alertTriangle', tint:{ c:'#EF4444', bg:'#FEF2F2' }, label:'Defects Detected', value:30, delta:'+2', tone:'bad', note:'this week', spark:[3,4,2,5,4,6,4], color:'#EF4444' },
+  ];
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-[26px] font-bold text-navy-900 tracking-tight">Mission Control</h1>
+          <p className="text-sm text-slate-400 mt-1">Monday, September 21, 2026 · Global verification overview</p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <button className="btn-ghost" onClick={() => toast('Report export queued', 'Your PDF snapshot will be ready shortly.', 'info')}>
+            <Icon name="download" size={15}/>Export
+          </button>
+          <button className="btn-primary" onClick={openUpload}><Icon name="upload" size={15}/>Upload dataset</button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <M from={{opacity:0, transform:'translateY(22px)'}} to={{opacity:1, transform:'none'}} className="xl:col-span-2">
+          <div className="relative rounded-3xl overflow-hidden shadow-lift p-6 lg:p-8 h-full"
+            style={{ background:'linear-gradient(120deg,#081426 0%,#12294D 45%,#0C4A6E 80%,#0E7490 115%)' }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage:'linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px)', backgroundSize:'28px 28px' }}/>
+            <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full blur-3xl opacity-40 animate-drift pointer-events-none" style={{ background:'radial-gradient(circle,#06B6D466,transparent 65%)' }}/>
+            <div className="relative">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-7">
+                <div className="flex justify-center lg:justify-start shrink-0">
+                  <Ring value={98.4} size={168} thickness={13} from="#22D3EE" to="#60A5FA" delay={500}>
+                    {(v) => (<>
+                      <div className="font-display text-[32px] font-bold text-white leading-none tabular-nums">{v.toFixed(1)}<span className="text-[18px] text-white/60">%</span></div>
+                      <div className="text-[10px] font-bold tracking-[0.14em] text-white/50 uppercase mt-1.5">Accuracy</div>
+                    </>)}
+                  </Ring>
+                </div>
+                <div className="text-center lg:text-left min-w-0">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulseDot"/>
+                    <span className="text-[10.5px] font-bold tracking-wide text-emerald-300 uppercase whitespace-nowrap">Live</span>
+                    <span className="text-[10.5px] text-white/50 whitespace-nowrap">{PRODUCT.engine}</span>
+                  </div>
+                  <h2 className="font-display text-[24px] font-bold text-white mt-3">AI Verification Status</h2>
+                  <p className="text-white/55 text-[13.5px] leading-relaxed mt-1.5 max-w-md">
+                    All systems operational. The engine is classifying the inbox and comparing Shipping Instructions against draft Bills of Lading in real time.
+                  </p>
+                  <div className="flex flex-wrap justify-center lg:justify-start gap-2.5 mt-4">
+                    {[['inbox','48','emails today'],['zap','3.2s','avg. decision'],['shieldCheck','87.8%','auto-resolved']].map(([ic,v,l]) => (
+                      <div key={l} className="flex items-center gap-2.5 rounded-xl bg-white/[.07] border border-white/10 backdrop-blur px-3.5 py-2.5">
+                        <Icon name={ic} size={15} className="text-aqua-300 shrink-0"/>
+                        <div className="text-left">
+                          <div className="text-[13.5px] font-bold text-white leading-none whitespace-nowrap">{v}</div>
+                          <div className="text-[9.5px] text-white/45 mt-0.5 whitespace-nowrap">{l}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <PipelineFlow/>
+            </div>
+          </div>
+        </M>
+        <M from={{opacity:0, transform:'translateY(22px)'}} to={{opacity:1, transform:'none'}} delay={.12}>
+          <div className="h-full rounded-3xl overflow-hidden shadow-lift relative">
+            <div className="h-full rounded-3xl p-5" style={{ background:'linear-gradient(160deg,#0E2039,#132A46 60%,#1B3554)' }}>
+              <div className="flex items-center justify-between mb-1 gap-2">
+                <div className="flex items-center gap-2 text-white min-w-0">
+                  <Icon name="activity" size={15} className="text-aqua-300 shrink-0"/>
+                  <span className="text-[13.5px] font-bold truncate">Live activity</span>
+                </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-2.5 py-1 text-[10px] font-bold tracking-wider text-red-300 uppercase shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulseDot"/>Streaming
+                </span>
+              </div>
+              <p className="text-[11px] text-white/40 mb-2 px-3">Decisions as they happen across the pipeline</p>
+              <LiveFeed/>
+            </div>
+          </div>
+        </M>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        {kpis.map((k,i) => <MetricCard key={k.label} {...k} delay={i*0.08}/>)}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <ChartCard title="Email Classification Distribution" sub="How the engine routed 1,250 emails" delay={.15} className="xl:col-span-4">
+          <div className="relative h-52">
+            <ChartCanvas build={buildDonut}/>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <div className="font-display text-2xl font-bold text-navy-900">1,250</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total emails</div>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {CH.donut.map(([label, value, color]) => (
+              <div key={label} className="flex items-center gap-2.5 text-[12px] min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background:color }}/>
+                <span className="font-semibold text-ink-700 flex-1 truncate">{label}</span>
+                <span className="font-bold tabular-nums text-navy-900 shrink-0">{value}</span>
+                <span className="text-slate-400 tabular-nums w-12 text-right shrink-0">{((value/1250)*100).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+        <ChartCard title="Verification Trends" sub="Weekly throughput, defects and human reviews — last 12 weeks" delay={.22} className="xl:col-span-8">
+          <div className="h-64"><ChartCanvas build={buildLine}/></div>
+        </ChartCard>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <ChartCard title="Top Defect Categories" sub="Where the comparison engine finds discrepancies" delay={.28} className="xl:col-span-7">
+          <div className="h-56"><ChartCanvas build={buildBar}/></div>
+        </ChartCard>
+        <M from={{opacity:0, transform:'translateY(20px)'}} to={{opacity:1, transform:'none'}} delay={.34} className="xl:col-span-5">
+          <div className="card p-5 h-full flex flex-col">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="min-w-0">
+                <h3 className="font-bold text-[15px] text-navy-900 truncate">Needs attention</h3>
+                <p className="text-xs text-slate-400 mt-0.5 truncate">Latest defects and escalations</p>
+              </div>
+              <span className="rounded-full bg-red-50 text-red-500 text-[11px] font-bold px-2.5 py-1 shrink-0">{attention.length} open</span>
+            </div>
+            {attention.length === 0
+              ? <EmptyState icon="shieldCheck" tint="#10B981" title="No mismatches detected" sub="Every comparison this week passed all seven fields."/>
+              : <div className="divide-y divide-slate-50 flex-1">
+                  {attention.map(e => (
+                    <button key={e.id} onClick={() => navigate('detail', e.id)}
+                      className="w-full flex items-center gap-3 py-3 px-1 text-left group hover:bg-slate-50/80 rounded-xl transition-colors">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background:STATUS[e.status].color }}/>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[12.5px] font-semibold text-ink-800 truncate group-hover:text-brand-600 transition-colors">{e.subject}</div>
+                        <div className="text-[11px] text-slate-400 font-mono truncate">{e.id} · {e.from}</div>
+                      </div>
+                      <StatusBadge status={e.status} size="sm"/>
+                      <Icon name="chevronRight" size={14} className="text-slate-300 group-hover:text-brand-400 group-hover:translate-x-0.5 transition-all shrink-0"/>
+                    </button>
+                  ))}
+                </div>}
+            <button onClick={() => navigate('emails')} className="mt-3 text-[12.5px] font-bold text-brand-500 hover:text-brand-600 inline-flex items-center gap-1.5 self-start">
+              Open email inbox <Icon name="arrowRight" size={14}/>
+            </button>
+          </div>
+        </M>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/pages/Emails.tsx — search rebuilt with TextField
+   ================================================================ */
+function EmailsPage() {
+  const { emails, navigate, searchSeed, setSearchSeed, toast } = useApp();
+  const [query, setQuery] = useState('');
+  const [cat, setCat] = useState('ALL');
+  const [quick, setQuick] = useState('ALL');
+  const [dateF, setDateF] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ key:null, dir:'desc' });
+  const PAGE_SIZE = 8;
+  useEffect(() => { if (searchSeed) { setQuery(searchSeed); setSearchSeed(''); } }, [searchSeed]);
+  useEffect(() => { setPage(1); }, [query, cat, quick, dateF]);
+
+  const filtered = useMemo(() => {
+    let list = emails.filter(e => {
+      const q = query.toLowerCase();
+      if (q && !(e.subject.toLowerCase().includes(q) || e.sender.toLowerCase().includes(q) || e.id.toLowerCase().includes(q))) return false;
+      if (cat !== 'ALL' && e.category !== cat) return false;
+      if (quick !== 'ALL' && e.status !== quick) return false;
+      if (dateF !== 'ALL') {
+        const d = ageDays(e);
+        if (dateF === 'TODAY' && d > 1) return false;
+        if (dateF === '7D' && d > 7) return false;
+        if (dateF === '30D' && d > 30) return false;
+      }
+      return true;
+    });
+    if (sort.key === 'date') list = [...list].sort((a,b) => sort.dir === 'asc' ? a.date.localeCompare(b.date) || a.time.localeCompare(b.time) : b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
+    if (sort.key === 'conf') list = [...list].sort((a,b) => sort.dir === 'asc' ? a.conf - b.conf : b.conf - a.conf);
+    return list;
+  }, [emails, query, cat, quick, dateF, sort]);
+
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const rows = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+  const toggleSort = (key) => setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir:'desc' });
+  const SORT_ICON = (key) => sort.key === key ? (sort.dir === 'asc' ? 'chevronUp' : 'chevronDown') : 'chevronDown';
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-[26px] font-bold text-navy-900 tracking-tight">Email Intelligence</h1>
+          <p className="text-sm text-slate-400 mt-1">1,250 emails indexed · 340 BL comparison requests · {emails.length} in current view set</p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <button className="btn-ghost" onClick={() => toast('Export scheduled', 'email_export.csv will download shortly.', 'info')}>
+            <Icon name="download" size={15}/>Export CSV
+          </button>
+          <button className="btn-primary" onClick={() => { toast('Re-queueing emails…', '2 emails sent back to the AI pipeline.', 'ai');
+            setTimeout(() => toast('AI re-run complete', '2 emails updated with fresh results.', 'success'), 1400); }}>
+            <Icon name="sparkles" size={15}/>Re-run AI
+          </button>
+        </div>
+      </div>
+
+      <div className="card p-4 space-y-3.5">
+        <div className="flex flex-wrap items-center gap-3">
+          <TextField className="flex-1 min-w-[220px]"
+            icon={<Icon name="search" size={15}/>}
+            placeholder="Search subject, sender or email ID…"
+            value={query} onChange={e => setQuery(e.target.value)}/>
+          <div className="flex items-center gap-2 text-[12.5px] font-semibold text-slate-400 shrink-0">
+            <Icon name="filter" size={14}/>Filters
+          </div>
+          <select value={cat} onChange={e => setCat(e.target.value)} className="input w-auto py-2 pr-8 cursor-pointer">
+            <option value="ALL">All categories</option>
+            {Object.entries(CATEGORIES).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+          <select value={dateF} onChange={e => setDateF(e.target.value)} className="input w-auto py-2 pr-8 cursor-pointer">
+            <option value="ALL">Any date</option><option value="TODAY">Today</option><option value="7D">Last 7 days</option><option value="30D">Last 30 days</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {[['ALL','All'],['NEEDS_REVIEW','Needs review'],['MISMATCH','Mismatches'],['OK','Verified'],['ERROR','Errors']].map(([id,label]) => (
+            <button key={id} onClick={() => setQuick(id)}
+              className={cx('rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-all duration-200 border whitespace-nowrap',
+                quick === id ? 'bg-navy-900 text-white border-navy-900 shadow-card' : 'bg-white text-slate-500 border-slate-200 hover:border-brand-300 hover:text-brand-600')}>
+              {label}{id !== 'ALL' && <span className="ml-1.5 opacity-60">{emails.filter(e => e.status === id).length}</span>}
+            </button>
+          ))}
+          <span className="ml-auto text-[12px] text-slate-400 font-medium whitespace-nowrap">{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px]">
+            <thead className="bg-slate-50/80 border-b border-slate-100">
+              <tr>
+                <th className="th">Email ID</th>
+                <th className="th">Subject / Sender</th>
+                <th className="th">Category</th>
+                <th className="th cursor-pointer select-none hover:text-brand-500" onClick={() => toggleSort('conf')}>
+                  <span className="inline-flex items-center gap-1">Confidence <Icon name={SORT_ICON('conf')} size={12} className={sort.key !== 'conf' ? 'opacity-30' : ''}/></span>
+                </th>
+                <th className="th">Status</th>
+                <th className="th cursor-pointer select-none hover:text-brand-500" onClick={() => toggleSort('date')}>
+                  <span className="inline-flex items-center gap-1">Received <Icon name={SORT_ICON('date')} size={12} className={sort.key !== 'date' ? 'opacity-30' : ''}/></span>
+                </th>
+                <th className="th text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {rows.map((e, i) => (
+                <M key={`${page}-${e.id}`} as="tr" from={{opacity:0, transform:'translateY(10px)'}} to={{opacity:1, transform:'none'}} dur={.4} delay={i*0.045}
+                  onClick={() => navigate('detail', e.id)}
+                  className="group cursor-pointer hover:bg-brand-50/40">
+                  <td className="px-4 py-3.5 font-mono text-[12.5px] font-semibold text-brand-600 whitespace-nowrap">{e.id}</td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-navy-100 to-slate-100 text-navy-700 text-[11px] font-bold flex items-center justify-center shrink-0">
+                        {e.from.split(' ').map(w => w[0]).slice(0,2).join('')}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-ink-800 truncate max-w-[300px] group-hover:text-brand-600 transition-colors">{e.subject}</div>
+                        <div className="text-[11.5px] text-slate-400 truncate max-w-[300px]">{e.from}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5"><CategoryBadge cat={e.category}/></td>
+                  <td className="px-4 py-3.5"><ConfBar v={e.conf}/></td>
+                  <td className="px-4 py-3.5"><StatusBadge status={e.status}/></td>
+                  <td className="px-4 py-3.5">
+                    <div className="text-[12.5px] font-semibold text-ink-700 whitespace-nowrap">{e.date}</div>
+                    <div className="text-[11px] text-slate-400">{e.time}</div>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <button className="w-8 h-8 rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-600 flex items-center justify-center transition-colors" title="View analysis">
+                        <Icon name="eye" size={15}/>
+                      </button>
+                      <button className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-ink-700 flex items-center justify-center transition-colors" title="Open source"
+                        onClick={ev => { ev.stopPropagation(); toast('Source viewer', 'Raw email & attachments open here in the full build.', 'info'); }}>
+                        <Icon name="externalLink" size={15}/>
+                      </button>
+                    </div>
+                  </td>
+                </M>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filtered.length === 0 &&
+          <EmptyState icon="search" tint="#64748B" title="No emails match your filters"
+            sub="Try a different search term or clear the active filters to see the full inbox."
+            action={<button className="btn-ghost" onClick={() => { setQuery(''); setCat('ALL'); setQuick('ALL'); setDateF('ALL'); }}>
+              <Icon name="refresh" size={15}/>Clear all filters</button>}/>}
+
+        {filtered.length > 0 &&
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 border-t border-slate-100 bg-slate-50/50">
+            <span className="text-[12px] text-slate-400 font-medium whitespace-nowrap">
+              Showing {(page-1)*PAGE_SIZE + 1}–{Math.min(page*PAGE_SIZE, filtered.length)} of {filtered.length}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button disabled={page === 1} onClick={() => setPage(page-1)} className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:border-brand-300 hover:text-brand-600 disabled:opacity-40 disabled:pointer-events-none transition-all">
+                <Icon name="chevronLeft" size={14}/>
+              </button>
+              {Array.from({ length: pages }, (_,i) => i+1).map(p => (
+                <button key={p} onClick={() => setPage(p)}
+                  className={cx('w-8 h-8 rounded-lg text-[12.5px] font-bold transition-all',
+                    p === page ? 'bg-navy-900 text-white shadow-card' : 'text-slate-500 hover:bg-slate-100')}>{p}</button>
+              ))}
+              <button disabled={page === pages} onClick={() => setPage(page+1)} className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:border-brand-300 hover:text-brand-600 disabled:opacity-40 disabled:pointer-events-none transition-all">
+                <Icon name="chevronRight" size={14}/>
+              </button>
+            </div>
+          </div>}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/components/DocumentCard.tsx + ComparisonTable.tsx
+   ================================================================ */
+const DOC_TONE = { SI:{ c:'#06B6D4' }, BL:{ c:'#2563EB' } };
+function DocumentCard({ d, expanded, onToggle }) {
+  const tone = DOC_TONE[d.type] || DOC_TONE.BL;
+  const ok = d.status === 'extracted';
+  return (
+    <button onClick={onToggle} className="relative w-full text-left rounded-2xl border p-4 overflow-hidden group transition-all duration-300 hover:shadow-card hover:-translate-y-0.5"
+      style={{ borderColor: tone.c + '30', background: tone.c + '08' }}>
+      <div className="absolute left-0 right-0 h-12 animate-scan pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background:'linear-gradient(180deg,transparent,rgba(34,211,238,.22),transparent)' }}/>
+      <div className="flex items-start gap-3 min-w-0">
+        <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background:tone.c+'18', color:tone.c }}>
+          <Icon name="fileText" size={18}/>
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-bold text-ink-800 font-mono truncate">{d.name}</div>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1">
+            <span className="rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide shrink-0" style={{ background:tone.c+'18', color:tone.c }}>{d.type}</span>
+            <span className="text-[11px] text-slate-400 shrink-0">{d.size}</span>
+            {ok
+              ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 whitespace-nowrap"><Icon name="checkCircle" size={11} className="shrink-0"/>{d.fields}/7 fields extracted</span>
+              : <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-500 whitespace-nowrap"><Icon name="alertCircle" size={11} className="shrink-0"/>Extraction failed</span>}
+          </div>
+        </div>
+        <Icon name={expanded ? 'chevronUp' : 'chevronDown'} size={15} className="text-slate-300 group-hover:text-slate-500 transition-colors shrink-0 mt-1"/>
+      </div>
+      {expanded && d.excerpt &&
+        <div className="mt-3.5 rounded-xl bg-white/80 border border-slate-100 p-3 font-mono text-[11px] leading-relaxed space-y-1">
+          {d.excerpt.map((l,i) => <div key={i} className={l.includes('—') || l.includes('failed') || l.includes('???') ? 'text-red-500' : 'text-slate-500'}>{l}</div>)}
+        </div>}
+      {expanded && !d.excerpt &&
+        <div className="mt-3.5 rounded-xl bg-white/80 border border-slate-100 p-3 text-[11.5px] text-slate-400">
+          Structured extraction complete — all seven shipment fields were normalized to the canonical schema.
+        </div>}
+    </button>
+  );
+}
+function ComparisonTable({ si, bl, defects }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+      <div className="grid items-center gap-2 px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10.5px] font-bold uppercase tracking-wider text-slate-400"
+        style={{ gridTemplateColumns:'minmax(130px,1.25fr) 1fr 30px 1fr 86px' }}>
+        <span>Field</span><span>SI (source)</span><span/>
+        <span>Draft BL</span><span className="text-center">Result</span>
+      </div>
+      {FIELDS.map(f => {
+        const defect = defects.includes(f.key);
+        return (
+          <div key={f.key}
+            className={cx('grid items-center gap-2 px-4 py-3 border-b border-slate-50 last:border-0 transition-colors', defect ? 'bg-red-50/60' : 'hover:bg-slate-50/60')}
+            style={{ boxShadow: defect ? 'inset 3px 0 0 #EF4444' : 'inset 3px 0 0 transparent' }}>
+            <div className="flex items-center gap-2 min-w-0">
+              <Icon name={f.icon} size={14} className={defect ? 'text-red-400 shrink-0' : 'text-slate-300 shrink-0'} strokeWidth={2.2}/>
+              <span className={cx('text-[12.5px] font-bold truncate', defect ? 'text-red-900' : 'text-ink-700')}>{f.label}</span>
+            </div>
+            <span className="font-mono text-[12px] px-2 py-1 rounded-lg truncate min-w-0"
+              style={defect ? { background:'#FEF2F2', color:'#B91C1C' } : { background:'#F1F5F9', color:'#334155' }}>
+              {valFmt(f.key, si[f.key])}
+            </span>
+            <Icon name="arrowRight" size={13} className="text-slate-300 shrink-0"/>
+            <span className="font-mono text-[12px] px-2 py-1 rounded-lg truncate min-w-0"
+              style={defect ? { background:'#FEF2F2', color:'#B91C1C', outline:'1.5px dashed #FCA5A5', outlineOffset:'-1.5px' } : { background:'#F1F5F9', color:'#334155' }}>
+              {valFmt(f.key, bl[f.key])}
+            </span>
+            <div className="flex justify-center">
+              {defect
+                ? <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-600 px-2 py-0.5 text-[10.5px] font-bold whitespace-nowrap"><Icon name="xCircle" size={11} className="shrink-0"/>Defect</span>
+                : <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[10.5px] font-bold whitespace-nowrap"><Icon name="check" size={11} className="shrink-0"/>Match</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function DecisionBanner({ status, defects }) {
+  const map = {
+    OK:           { icon:'checkCircle', t:'All seven fields match', s:'No mismatch detected — safe to release the draft BL.', bg:'#ECFDF5', bd:'#A7F3D0', fg:'#065F46' },
+    MISMATCH:     { icon:'xCircle', t:`${defects.length} field${defects.length > 1 ? 's' : ''} require correction`, s:'The draft BL deviates from the SI. Correct before issue.', bg:'#FEF2F2', bd:'#FECACA', fg:'#991B1B' },
+    NEEDS_REVIEW: { icon:'helpCircle', t:'Escalated to human review', s:'The engine could not reach a confident decision.', bg:'#FFFBEB', bd:'#FDE68A', fg:'#92400E' },
+  };
+  const m = map[status] || map.OK;
+  return (
+    <div className="rounded-2xl border p-4 flex items-start gap-3.5" style={{ background:m.bg, borderColor:m.bd }}>
+      <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background:m.fg+'14', color:m.fg }}>
+        <Icon name={m.icon} size={18}/>
+      </span>
+      <div className="min-w-0">
+        <div className="text-[14px] font-bold" style={{ color:m.fg }}>{m.t}</div>
+        <div className="text-[12.5px] mt-0.5" style={{ color:m.fg, opacity:.75 }}>{m.s}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/pages/EmailDetail.tsx
+   ================================================================ */
+function DetailTimeline({ email }) {
+  const failed = email.status === 'ERROR';
+  const steps = [
+    { label:'Email received', sub:`${email.date} · ${email.time}`, icon:'mail', state:'done' },
+    { label:'Classified as ' + email.category, sub:`confidence ${Math.round(email.conf*100)}%`, icon:'sparkles', state:'done' },
+    { label:'Documents located', sub:`${email.atts.length} attachment${email.atts.length !== 1 ? 's' : ''}`, icon:'files', state:'done' },
+    { label:'Field extraction & normalization', sub: failed ? 'failed — attachment corrupted' : '7-field canonical schema', icon:'scan', state: failed ? 'fail' : 'done' },
+    { label:'SI ↔ BL comparison', sub: failed ? 'not reached' : email.defectFields.length ? `${email.defectFields.length} defect(s) found` : 'all fields equal', icon:'gitCompare', state: failed ? 'pending' : 'done' },
+    { label:'Decision: ' + email.status, sub:'decision engine', icon:'shieldCheck', state:'final' },
+  ];
+  const nodeStyle = (s) => s === 'fail' ? { bg:'#FEE2E2', fg:'#DC2626', icon:'xCircle' }
+    : s === 'pending' ? { bg:'#F1F5F9', fg:'#94A3B8', icon:'clock' }
+    : s === 'final' ? { bg:(STATUS[email.status].color)+'18', fg:STATUS[email.status].color, icon:STATUS[email.status].icon }
+    : { bg:'#ECFDF5', fg:'#059669', icon:'check' };
+  return (
+    <div className="relative pl-1">
+      {steps.map((s, i) => {
+        const n = nodeStyle(s.state);
+        return (
+          <div key={i} className="relative flex gap-3.5 pb-5 last:pb-0">
+            {i < steps.length - 1 && <div className={cx('absolute left-[15px] top-8 bottom-0 w-[2px] rounded pointer-events-none', s.state === 'done' ? 'bg-emerald-200' : 'bg-slate-100')}/>}
+            <span className="relative w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style={{ background:n.bg, color:n.fg }}>
+              <Icon name={n.icon} size={13.5} strokeWidth={2.4}/>
+            </span>
+            <div className="pt-1 min-w-0">
+              <div className={cx('text-[12.5px] font-bold', s.state === 'fail' ? 'text-red-600' : s.state === 'pending' ? 'text-slate-400' : 'text-ink-800')}>{s.label}</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">{s.sub}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function EmailDetailPage({ id }) {
+  const { emails, updateEmail, reviews, addReview, navigate, toast } = useApp();
+  const [exp, setExp] = useState({});
+  const [retrying, setRetrying] = useState(false);
+  const email = emails.find(e => e.id === id);
+
+  useEffect(() => {
+    if (retrying && email && email.status !== 'ERROR') {
+      setRetrying(false);
+      toast('Processing recovered', email.id + ' verified — all 7 fields match.', 'success');
+    }
+  }, [email && email.status, retrying]);
+
+  if (!email) return (
+    <EmptyState icon="mail" title="Email not found" sub="This email may have been removed."
+      action={<button className="btn-ghost" onClick={() => navigate('emails')}>Back to inbox</button>}/>
+  );
+
+  const canCompare = email.si && email.bl;
+  const inQueue = reviews.some(r => r.emailId === email.id);
+  const retry = () => {
+    if (!email.recovered) { toast('Retry failed', 'The source file is still corrupted on disk.', 'danger'); return; }
+    setRetrying(true);
+    setTimeout(() => updateEmail(email.id, { status:'OK', conf:.97, si:email.recovered.si, bl:email.recovered.bl, error:null, defectFields:[] }), 1900);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={() => navigate('emails')} className="btn-ghost btn-sm shrink-0"><Icon name="arrowLeft" size={14}/>Inbox</button>
+          <Icon name="chevronRight" size={14} className="text-slate-300 shrink-0"/>
+          <span className="font-mono text-[13px] font-bold text-navy-900 whitespace-nowrap">{email.id}</span>
+          <StatusBadge status={email.status}/>
+        </div>
+        <div className="flex items-center gap-2">
+          {email.status === 'MISMATCH' && !inQueue &&
+            <button className="btn-amber-o" onClick={() => addReview(email)}>
+              <Icon name="send" size={14}/>Send to review
+            </button>}
+          {inQueue && <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2 text-[12.5px] font-bold text-amber-600 whitespace-nowrap"><Icon name="clock" size={14} className="shrink-0"/>In review queue</span>}
+          <button className="btn-ghost" onClick={() => toast('Report generated', 'verification_report_' + email.id + '.pdf queued for download.', 'info')}>
+            <Icon name="download" size={15}/>Report
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="lg:col-span-5 space-y-5">
+          <M from={{opacity:0, y:18}} to={{opacity:1, y:0}} className="card p-5">
+            <div className="flex items-start gap-3.5 min-w-0">
+              <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-navy-600 to-brand-500 text-white text-[13px] font-bold flex items-center justify-center shrink-0 shadow-glowBrand">
+                {email.from.split(' ').map(w => w[0]).slice(0,2).join('')}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14.5px] font-bold text-navy-900 leading-snug">{email.subject}</div>
+                <div className="text-[12px] text-slate-400 mt-1">{email.from} · {email.sender}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{email.date}, {email.time}</div>
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl bg-slate-50 border border-slate-100 p-4 text-[13px] leading-relaxed text-ink-700">
+              {email.body}
+            </div>
+            <div className="mt-4">
+              <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">Attachments · {email.atts.length}</div>
+              {email.atts.length === 0
+                ? <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-[12px] text-slate-400">No attachments on this email</div>
+                : <div className="space-y-2.5">
+                    {email.atts.map(d => (
+                      <DocumentCard key={d.name} d={d} expanded={!!exp[d.name]} onToggle={() => setExp(s => ({ ...s, [d.name]: !s[d.name] }))}/>
+                    ))}
+                  </div>}
+            </div>
+          </M>
+
+          <M from={{opacity:0, y:18}} to={{opacity:1, y:0}} delay={.1} className="card p-5">
+            <h3 className="font-bold text-[15px] text-navy-900 mb-4 flex items-center gap-2">
+              <Icon name="clock" size={15} className="text-brand-500 shrink-0"/>Processing timeline
+            </h3>
+            <DetailTimeline email={email}/>
+          </M>
+        </div>
+
+        <div className="lg:col-span-7 space-y-5">
+          <M from={{opacity:0, y:18}} to={{opacity:1, y:0}} delay={.06} className="card overflow-hidden">
+            <div className="relative px-5 py-4 text-white overflow-hidden" style={{ background:'linear-gradient(100deg,#6D28D9,#2563EB 55%,#0891B2)' }}>
+              <div className="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-white/10 blur-2xl pointer-events-none"/>
+              <div className="relative flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon name="sparkles" size={17} className="text-aqua-300 shrink-0"/>
+                  <span className="font-display font-bold text-[15px] truncate">AI Analysis</span>
+                </div>
+                <span className="rounded-full bg-white/15 border border-white/20 px-2.5 py-1 text-[10.5px] font-bold whitespace-nowrap shrink-0">{PRODUCT.engine}</span>
+              </div>
+            </div>
+            <div className="p-5 space-y-5">
+              {email.status === 'ERROR' ? (
+                retrying
+                  ? <div className="py-10"><LoadingAnimation label="Re-opening attachment · OCR enhancement · Field extraction…"/></div>
+                  : <ErrorState reason={email.error} onRetry={retry} busy={retrying}/>
+              ) : (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-slate-50/80 border border-slate-100 p-4">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Ring value={email.conf*100} size={72} thickness={7.5} from="#8B5CF6" to="#2563EB" track="#E2E8F0" delay={400}>
+                      {(v) => <span className="font-display text-[15px] font-bold text-navy-900">{Math.round(v)}%</span>}
+                    </Ring>
+                    <div className="min-w-0">
+                      <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400">Classification</div>
+                      <div className="font-mono text-[15px] font-bold text-navy-900 mt-0.5 truncate">{email.category}</div>
+                    </div>
+                  </div>
+                  <AIConfidenceBadge conf={email.conf}/>
+                </div>
+
+                {canCompare ? (
+                  <>
+                    <DecisionBanner status={email.status} defects={email.defectFields}/>
+                    {email.defectFields.length > 0 &&
+                      <div className="flex flex-wrap gap-2">
+                        {email.defectFields.map(f => (
+                          <span key={f} className="inline-flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200 px-3 py-1.5 text-[11.5px] font-bold text-red-600">
+                            <Icon name="alertTriangle" size={12} className="shrink-0"/>{fieldLabel(f)}
+                          </span>))}
+                      </div>}
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <h4 className="font-bold text-[14px] text-navy-900">Document comparison · SI vs draft BL</h4>
+                        <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">normalize → exact → semantic</span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[540px]"><ComparisonTable si={email.si} bl={email.bl} defects={email.defectFields}/></div>
+                      </div>
+                    </div>
+                    {email.evidence && email.evidence.length > 0 &&
+                      <div>
+                        <h4 className="font-bold text-[14px] text-navy-900 mb-3">Evidence</h4>
+                        <div className="space-y-2.5">
+                          {email.evidence.map((ev,i) => (
+                            <div key={i} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-2.5 min-w-0">
+                              <span className={cx('rounded-md px-2 py-1 text-[10.5px] font-bold shrink-0', ev.doc === 'SI' ? 'bg-aqua-500/10 text-aqua-600' : 'bg-brand-500/10 text-brand-600')}>{ev.doc}</span>
+                              <code className="font-mono text-[12px] text-ink-700 truncate">“<span className="bg-amber-100/80 rounded px-0.5">{ev.text}</span>”</code>
+                            </div>))}
+                          {email.defectFields[0] &&
+                            <p className="text-[12.5px] text-slate-500 leading-relaxed pt-1 pl-3 border-l-2 border-brand-200">
+                              {DEFECT_NOTES[email.defectFields[0]]}
+                            </p>}
+                        </div>
+                      </div>}
+                  </>
+                ) : (
+                  <>
+                    {email.status === 'NEEDS_REVIEW' && <DecisionBanner status="NEEDS_REVIEW" defects={[]}/>}
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+                      <div className="text-[13px] font-bold text-ink-800 mb-2">Why this result</div>
+                      <ul className="space-y-2">
+                        {(email.reviewReason === 'missing_attachment'
+                            ? ['Only one document located — comparison requires both SI and BL','Review reason: missing_attachment','No values were guessed; the case was escalated instead.']
+                            : ['OCR recovered 2 of 7 fields from the BL scan','Review reason: unreadable','Escalated with full evidence for human verification.']
+                         ).map((r,i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-[12.5px] text-slate-500">
+                            <Icon name="check" size={13} className="text-brand-400 mt-0.5 shrink-0"/>{r}
+                          </li>))}
+                      </ul>
+                    </div>
+                    <button className="btn-primary w-full" onClick={() => navigate('reviews')}>
+                      <Icon name="clipboardCheck" size={15}/>Open review queue
+                    </button>
+                  </>
+                )}
+              </>
+              )}
+            </div>
+          </M>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/pages/Reviews.tsx
+   ================================================================ */
+function ReviewCard({ c, onAct }) {
+  const { emails } = useApp();
+  const email = emails.find(e => e.id === c.emailId);
+  const reason = REASONS[c.reason] || REASONS.manual;
+  const [open, setOpen] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [vals, setVals] = useState(() => Object.fromEntries((c.editFields || []).map(f => [f.key, f.value])));
+  const [retrying, setRetrying] = useState(false);
+  const [retries, setRetries] = useState(0);
+
+  const doRetry = () => {
+    setRetrying(true);
+    setTimeout(() => {
+      setRetrying(false); setRetries(r => r+1);
+      if (c.reason === 'missing_value') onAct(c.id, 'retry-ok');
+      else window.dispatchEvent(new CustomEvent('nooutput-retry-failed', { detail:{ id:c.id, reason:c.reason } }));
+    }, 1800);
+  };
+
+  return (
+    <div className="card overflow-hidden hover:shadow-lift transition-shadow">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-3 p-5 text-left">
+        <span className="rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white text-[12.5px] font-bold px-3 py-1.5 shadow-[0_6px_18px_-6px_rgba(245,158,11,.6)] shrink-0 whitespace-nowrap">
+          Case #{c.id}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold shrink-0 whitespace-nowrap" style={{ background:reason.bg, color:reason.color }}>
+          <Icon name={reason.icon} size={12.5} className="shrink-0"/>{reason.label}
+        </span>
+        <div className="hidden md:block min-w-0 flex-1">
+          <div className="text-[12.5px] font-semibold text-slate-400 truncate">{email ? email.subject : c.emailId}</div>
+        </div>
+        <div className="ml-auto flex items-center gap-3 shrink-0">
+          <Ring value={c.confidence} size={46} thickness={5.5} from={c.confidence < 65 ? '#EF4444' : '#F59E0B'} to={c.confidence < 65 ? '#F59E0B' : '#FBBF24'} track="#F1F5F9" delay={300}>
+            {() => <span className="text-[10.5px] font-bold text-navy-900">{c.confidence}%</span>}
+          </Ring>
+          <span className="hidden sm:block text-[10.5px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap">{c.received}</span>
+          <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className="text-slate-300 shrink-0"/>
+        </div>
+      </button>
+
+      {open && (
+        <div className="px-5 pb-5 border-t border-slate-100 pt-4 animate-pageIn">
+          <p className="text-[13px] text-slate-500 leading-relaxed">{c.summary}</p>
+
+          <div className="grid md:grid-cols-2 gap-3 mt-4">
+            {c.evidence.map(ev => {
+              const tone = ev.tone === 'ok' ? { b:'#A7F3D0', bg:'#F0FDF4', chip:'bg-emerald-500/10 text-emerald-600', ic:'checkCircle' }
+                : ev.tone === 'warn' ? { b:'#FDE68A', bg:'#FFFBEB', chip:'bg-amber-500/10 text-amber-600', ic:'alertTriangle' }
+                : { b:'#FECACA', bg:'#FEF2F2', chip:'bg-red-500/10 text-red-600', ic:'alertTriangle' };
+              return (
+                <div key={ev.doc} className="rounded-xl border p-3.5 min-w-0" style={{ borderColor:tone.b, background:tone.bg }}>
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <span className={cx('rounded-md px-2 py-0.5 text-[10.5px] font-bold shrink-0', tone.chip)}>{ev.doc} document</span>
+                    <Icon name={tone.ic} size={14} className="text-slate-400 shrink-0"/>
+                  </div>
+                  <div className="font-mono text-[11px] leading-relaxed space-y-1 overflow-hidden">
+                    {ev.lines.map((l,i) => <div key={i} className="text-slate-500 break-words">{l}</div>)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-brand-50/70 border border-brand-100 px-3.5 py-3">
+            <Icon name="sparkles" size={14} className="text-brand-500 mt-0.5 shrink-0"/>
+            <p className="text-[12.5px] text-brand-800 font-medium">{c.suggestion}</p>
+          </div>
+
+          {editing &&
+            <div className="mt-4 rounded-xl border border-brand-100 bg-brand-50/60 p-4 animate-popIn">
+              <div className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-3">Correction — confirm values from source</div>
+              {(c.editFields || []).map(f => (
+                <div key={f.key} className="flex flex-wrap items-center gap-3 mb-2.5">
+                  <label className="w-44 text-[12.5px] font-semibold text-ink-700">{f.label}</label>
+                  <input value={vals[f.key]} onChange={e => setVals({ ...vals, [f.key]: e.target.value })}
+                    className="input py-1.5 w-40 font-mono text-[12.5px]"/>
+                  <span className="text-[11px] text-slate-400">SI: {f.si} · BL: {f.bl}</span>
+                </div>))}
+              <div className="flex gap-2 mt-3">
+                <button className="btn-primary btn-sm" onClick={() => onAct(c.id, 'correct')}><Icon name="check" size={13}/>Save &amp; resolve</button>
+                <button className="btn-ghost btn-sm" onClick={() => setEditing(false)}>Cancel</button>
+              </div>
+            </div>}
+
+          <div className="mt-4 grid md:grid-cols-[1fr_250px] gap-5">
+            <div className="flex flex-wrap items-center gap-2.5 content-start">
+              <button className="btn-emerald" onClick={() => onAct(c.id, 'approve')}><Icon name="check" size={15}/>Approve</button>
+              <button className="btn-primary" disabled={!(c.editFields || []).length}
+                title={(c.editFields || []).length ? '' : 'Nothing to correct — attach the missing document instead'}
+                onClick={() => setEditing(true)}><Icon name="pencil" size={14}/>Correct</button>
+              <button className="btn-danger-o" onClick={() => onAct(c.id, 'reject')}><Icon name="x" size={14}/>Reject</button>
+              <button className="btn-ghost" onClick={doRetry} disabled={retrying}>
+                {retrying ? <Icon name="loader" size={14} className="animate-spin"/> : <Icon name="rotateCcw" size={14}/>}
+                {retrying ? 'Re-processing…' : 'Retry' + (retries ? ` (${retries})` : '')}
+              </button>
+              {retries > 0 && !retrying && c.reason !== 'missing_value' &&
+                <span className="text-[11.5px] font-semibold text-red-500 flex items-center gap-1"><Icon name="alertCircle" size={12} className="shrink-0"/>Retry failed — issue persists</span>}
+            </div>
+            <div>
+              {c.timeline.map((t,i) => (
+                <div key={i} className="relative flex gap-3 pb-3 last:pb-0">
+                  {i < c.timeline.length - 1 && <div className="absolute left-[11px] top-6 bottom-0 w-[2px] rounded bg-slate-100 pointer-events-none"/>}
+                  <span className={cx('relative w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10',
+                    t.state === 'active' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-50 text-emerald-600')}>
+                    <Icon name={t.icon} size={11.5} strokeWidth={2.4}/>
+                  </span>
+                  <div className="pt-0.5 min-w-0">
+                    <div className="text-[12px] font-semibold text-ink-700 leading-tight">{t.label}</div>
+                    {t.t && <div className="text-[10.5px] text-slate-400 mt-0.5">{t.t}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function ReviewsPage() {
+  const { reviews, setReviews, updateEmail, navigate, restoreReviews, toast } = useApp();
+  const [exiting, setExiting] = useState(null);
+
+  useEffect(() => {
+    const h = (e) => toast('Retry failed', `Case #${e.detail.id}: the ${e.detail.reason.replace('_',' ')} issue persists after re-processing.`, 'danger');
+    window.addEventListener('nooutput-retry-failed', h);
+    return () => window.removeEventListener('nooutput-retry-failed', h);
+  }, []);
+
+  const act = (id, type) => {
+    setExiting({ id, type });
+    setTimeout(() => {
+      const c = reviews.find(r => r.id === id);
+      setReviews(rs => rs.filter(r => r.id !== id));
+      setExiting(null);
+      if (!c) return;
+      if (type === 'approve') { updateEmail(c.emailId, { status:'REVIEWED' }); toast('Case #' + id + ' approved', 'Final result recorded and synced to the report.', 'success'); }
+      if (type === 'reject')  { updateEmail(c.emailId, { status:'REJECTED' }); toast('Case #' + id + ' rejected', 'The AI result was overruled by the reviewer.', 'warn'); }
+      if (type === 'correct') { updateEmail(c.emailId, { status:'OK' }); toast('Values corrected', 'Comparison re-issued as OK with reviewer overrides.', 'success'); }
+      if (type === 'retry-ok'){ updateEmail(c.emailId, { status:'OK' }); toast('Retry succeeded', 'Recovered data allowed a confident decision — case resolved.', 'ai'); }
+    }, 500);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-[26px] font-bold text-navy-900 tracking-tight">AI Review Queue</h1>
+          <p className="text-sm text-slate-400 mt-1">Cases the engine escalated for human judgment · avg. SLA 2.4h</p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200 px-3.5 py-2 text-[12.5px] font-bold text-amber-600 whitespace-nowrap">
+            <Icon name="clock" size={14} className="shrink-0"/>{reviews.length} pending
+          </span>
+          <button className="btn-ghost" onClick={() => navigate('emails')}><Icon name="inbox" size={15}/>All emails</button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        <div className="xl:col-span-8 space-y-4">
+          {reviews.length === 0 ? (
+            <div className="card">
+              <EmptyState icon="shieldCheck" tint="#10B981" title="No documents awaiting review"
+                sub="The queue is clear — every escalation has been resolved. New cases will appear here the moment the AI needs a human."
+                action={<button className="btn-ghost" onClick={() => { restoreReviews(); toast('Queue restored', 'Demo review cases re-loaded.', 'info'); }}>
+                  <Icon name="refresh" size={15}/>Restore demo queue</button>}/>
+            </div>
+          ) : reviews.map(c => (
+            <ExitRow key={c.id} exiting={exiting && exiting.id === c.id}>
+              <ReviewCard c={c} onAct={act}/>
+            </ExitRow>
+          ))}
+        </div>
+
+        <div className="xl:col-span-4 space-y-5">
+          <M from={{opacity:0, y:16}} to={{opacity:1, y:0}} delay={.15} className="card p-5">
+            <h3 className="font-bold text-[14.5px] text-navy-900 mb-3.5">Why cases escalate</h3>
+            <div className="space-y-2.5">
+              {Object.entries(REASONS).filter(([k]) => k !== 'manual').map(([k, r]) => {
+                const n = reviews.filter(x => x.reason === k).length;
+                return (
+                  <div key={k} className="flex items-center gap-3 min-w-0">
+                    <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background:r.bg, color:r.color }}>
+                      <Icon name={r.icon} size={14}/>
+                    </span>
+                    <span className="text-[12.5px] font-semibold text-ink-700 flex-1 truncate">{r.label}</span>
+                    <span className={cx('text-[12px] font-bold tabular-nums shrink-0', n ? 'text-navy-900' : 'text-slate-300')}>{n}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11.5px] text-slate-400 leading-relaxed mt-4 pt-3.5 border-t border-slate-100">
+              The engine never guesses. When confidence drops below the threshold or inputs are unusable, it escalates with full evidence — never failing silently.
+            </p>
+          </M>
+          <M from={{opacity:0, y:16}} to={{opacity:1, y:0}} delay={.22} className="card p-5">
+            <h3 className="font-bold text-[14.5px] text-navy-900 mb-4">Reviewer SLA distribution</h3>
+            {[['Under 1h',42,'#10B981'],['1 – 4h',35,'#2563EB'],['Over 4h',23,'#F59E0B']].map(([l,v,c]) => (
+              <div key={l} className="mb-3 last:mb-0">
+                <div className="flex items-center justify-between text-[11.5px] font-semibold text-slate-500 mb-1.5"><span>{l}</span><span>{v}%</span></div>
+                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <M from={{width:'0%'}} to={{width:v+'%'}} dur={.9} delay={.4}
+                    className="h-full rounded-full" style={{ background:c }}/>
+                </div>
+              </div>
+            ))}
+          </M>
+          <M from={{opacity:0, y:16}} to={{opacity:1, y:0}} delay={.3} className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background:'linear-gradient(135deg,#1E293B,#0F172A)' }}>
+            <div className="absolute -right-6 -bottom-8 opacity-[.07] pointer-events-none"><Icon name="code" size={130}/></div>
+            <div className="relative">
+              <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-aqua-300 mb-2.5">Pro tip</div>
+              <p className="text-[13px] leading-relaxed text-white/80">Review decisions feed back into evaluation scoring. Consistent, evidence-based approvals raise your <span className="font-bold text-white">Review Reliability</span> metric.</p>
+            </div>
+          </M>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/pages/Evaluation.tsx
+   ================================================================ */
+const EVAL_STEPS = [
+  { label:'Ingesting inbox dataset', sub:'14 emails · 23 attachments', icon:'inbox', dur:750 },
+  { label:'Classifying emails', sub:'5-category taxonomy', icon:'sparkles', dur:1000 },
+  { label:'Extracting SI / BL fields', sub:'7-field canonical schema', icon:'scan', dur:1100 },
+  { label:'Running comparisons', sub:'normalize → exact → semantic', icon:'gitCompare', dur:1000 },
+  { label:'Scoring vs reference set', sub:'private evaluation endpoint', icon:'gauge', dur:950 },
+];
+function SubmissionPreview() {
+  const L = ({ k, v, c }) => <div className="flex"><span className="text-slate-500">{k}</span><span className={c}>{v}</span></div>;
+  return (
+    <pre className="font-mono text-[11.5px] leading-[1.75] overflow-x-auto">
+      <L k="{" v="" c=""/>
+      <L k={'  "EML-1001": {'} v="" c=""/>
+      <L k={'    "category": '} v={'"BL_COMPARISON",'} c="text-aqua-300"/>
+      <L k={'    "has_defect": '} v="true," c="text-amber-300"/>
+      <L k={'    "defect_fields": ['} v={'"container_count"'} c="text-amber-300"/>
+      <L k={'    ]'} v="" c=""/>
+      <L k={'  },'} v="" c=""/>
+      <L k={'  "EML-1002": {'} v="" c=""/>
+      <L k={'    "category": '} v={'"BL_COMPARISON",'} c="text-aqua-300"/>
+      <L k={'    "has_defect": '} v="false" c="text-emerald-300"/>
+      <L k={'  },'} v="" c=""/>
+      <div className="text-slate-500">  … 12 more entries</div>
+      <L k="}" v="" c=""/>
+    </pre>
+  );
+}
+function LiveSubmissionPreview({ data }) {
+  const L = ({ k, v, c }) => <div className="flex"><span className="text-slate-500">{k}</span><span className={c}>{v}</span></div>;
+  const entries = Object.entries(data || {});
+  const shown = entries.slice(0, 2);
+  return (
+    <pre className="font-mono text-[11.5px] leading-[1.75] overflow-x-auto">
+      <L k="{" v="" c=""/>
+      {shown.map(([id, rec], i) => (
+        <React.Fragment key={id}>
+          <L k={`  "${id}": {`} v="" c=""/>
+          <L k={'    "category": '} v={`"${rec.category}",`} c="text-aqua-300"/>
+          <L k={'    "status": '} v={`"${rec.status}",`} c={rec.status === 'MISMATCH' ? 'text-amber-300' : rec.status === 'NEEDS_REVIEW' ? 'text-rose-300' : 'text-emerald-300'}/>
+          <L k={'    "has_defect": '} v={rec.has_defect ? 'true,' : 'false,'} c={rec.has_defect ? 'text-amber-300' : 'text-emerald-300'}/>
+          <L k={'    "defect_fields": '} v={JSON.stringify(rec.defect_fields || [])} c="text-amber-300"/>
+          <L k={i === shown.length - 1 ? '  }' : '  },'} v="" c=""/>
+        </React.Fragment>
+      ))}
+      {entries.length > shown.length && (
+        <div className="text-slate-500">  … {entries.length - shown.length} more entries</div>
+      )}
+      <L k="}" v="" c=""/>
+    </pre>
+  );
+}
+function EvaluationPage() {
+  const { emails, toast, liveMode, authToken } = useApp();
+  const [phase, setPhase] = useState('idle');
+  const [step, setStep] = useState(-1);
+  const [mode, setMode] = useState('demo');       // 'demo' | 'scored' | 'local'
+  const [scoreData, setScoreData] = useState(null);
+  const [localSummary, setLocalSummary] = useState(null);
+  const [submissionData, setSubmissionData] = useState(null);
+
+  const run = async () => {
+    setPhase('run'); setStep(0);
+    let acc = 0;
+    EVAL_STEPS.forEach((s, i) => {
+      acc += s.dur;
+      setTimeout(() => setStep(i + 1), acc);
+    });
+    const minWait = new Promise(r => setTimeout(r, acc + 300));
+
+    if (liveMode && authToken) {
+      let scoreResp = null;
+      let submission = null;
+      try { await apiPost('/evaluation/generate', authToken); } catch (e) { /* non-fatal */ }
+      try { scoreResp = await apiPost('/evaluation/submit', authToken); } catch (e) { /* eval server likely unreachable */ }
+      try { submission = await apiGet('/evaluation/submission', authToken); } catch (e) { /* ignore */ }
+      await minWait;
+      setPhase('done');
+      setSubmissionData(submission);
+      if (scoreResp && typeof scoreResp.final_score === 'number') {
+        setMode('scored'); setScoreData(scoreResp);
+        toast('Evaluation complete', `Scored ${(scoreResp.final_score * 100).toFixed(1)}% against the reference set.`, 'ai');
+      } else {
+        setMode('local'); setLocalSummary(buildLocalSummary(emails));
+        toast('Reference server unavailable', 'Showing a local pipeline summary instead — the official score needs the organizers\u2019 evaluation server (EVAL_SERVER_URL).', 'info');
+      }
+    } else {
+      await minWait;
+      setPhase('done'); setMode('demo');
+      toast('Evaluation complete', 'Scored 87.5% against the private reference set.', 'ai');
+    }
+  };
+
+  const download = () => {
+    let data = submissionData;
+    if (!data) {
+      data = {};
+      emails.filter(e => e.category === 'BL_COMPARISON').forEach(e => {
+        data[e.id] = { category: e.category, status: e.status, review_reason: e.reviewReason || null,
+          has_defect: e.status === 'MISMATCH', defect_fields: e.defectFields };
+      });
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'submission.json'; a.click();
+    URL.revokeObjectURL(a.href);
+    toast('submission.json downloaded', liveMode ? 'Real generated submission.' : 'Ready to POST to /evaluation/submit.', 'success');
+  };
+  const copy = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(JSON.stringify({ EML_1001:{ category:'BL_COMPARISON', has_defect:true, defect_fields:['container_count'] }}, null, 2));
+    toast('Copied', 'Submission shape copied to clipboard.', 'info');
+  };
+  const bar = (pct, delay) => (
+    <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+      <M from={{width:'0%'}} to={{width:pct+'%'}} dur={1.1} delay={delay}
+        className="h-full rounded-full bg-gradient-to-r from-ai-500 via-brand-500 to-aqua-400"/>
+    </div>
+  );
+
+  // Present the same 3-bar / ring / category-badge layout in all three modes,
+  // just fed from different (truthful) numbers.
+  const view = mode === 'scored' && scoreData ? {
+    ringLabel: 'Score', ringValue: scoreData.final_score * 100,
+    title: `Live run \u00b7 ${scoreData.n_emails} emails scored`,
+    subtitle: 'Weighted composite of classification accuracy, defect detection and human-review reliability \u2014 scored by the organizers\u2019 reference server.',
+    badge: null,
+    bars: [
+      ['Email classification', scoreData.stage1.macro_f1 * 100],
+      ['Defect detection', scoreData.stage3.defect_f1 * 100],
+      ['Review reliability', scoreData.reliability.escalation_f1 * 100],
+    ],
+    categories: Object.keys(CATEGORIES).map(c => {
+      const per = (scoreData.stage1.per || {})[c] || { tp:0, fp:0, fn:0 };
+      return [c, Math.round(prf(per.tp, per.fp, per.fn).f * 100)];
+    }),
+  } : mode === 'local' && localSummary ? {
+    ringLabel: 'Processed', ringValue: localSummary.processedRate * 100,
+    title: `Local run \u00b7 ${localSummary.total} emails`,
+    subtitle: 'No reference server reachable, so this is a summary of what the pipeline actually decided \u2014 not an accuracy score (there\u2019s no ground truth on this machine to score against).',
+    badge: { icon:'alertTriangle', text:'Reference server unreachable' },
+    bars: [
+      ['BL comparisons processed', localSummary.blTotal ? 100 : 0],
+      ['Mismatches flagged', localSummary.defectRate * 100],
+      ['Escalated for review', localSummary.reviewRate * 100],
+    ],
+    categories: Object.entries(localSummary.byCategory).map(([c, n]) => [c, n]),
+    categoriesAreCounts: true,
+  } : {
+    ringLabel: 'Score', ringValue: EVAL_SCORES.overall,
+    title: 'Submission v5 \u00b7 dataset v2.3',
+    subtitle: 'Weighted composite of classification accuracy, defect detection and human-review reliability.',
+    badge: null,
+    bars: [
+      ['Email classification', EVAL_SCORES.classification],
+      ['Defect detection', EVAL_SCORES.defects],
+      ['Review reliability', EVAL_SCORES.review],
+    ],
+    categories: [['BL_COMPARISON',91],['SI_REQUEST',96],['INVOICE',94],['GENERAL',90],['SPAM',97]],
+  };
+
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-[26px] font-bold text-navy-900 tracking-tight">Evaluation</h1>
+          <p className="text-sm text-slate-400 mt-1">Score your submission against the hackathon reference set</p>
+        </div>
+        <button className="btn-primary" onClick={run} disabled={phase === 'run'}>
+          {phase === 'run' ? <Icon name="loader" size={15} className="animate-spin"/> : <Icon name="play" size={14}/>}
+          {phase === 'run' ? 'Running…' : 'Run Evaluation'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        <div className="xl:col-span-7">
+          {phase === 'run' ? (
+            <M from={{opacity:0, y:18}} to={{opacity:1, y:0}} className="card p-8">
+              <div className="flex flex-col items-center text-center">
+                <LoadingAnimation size={64}/>
+                <h3 className="font-display text-lg font-bold text-navy-900 mt-5">Evaluating submission…</h3>
+                <p className="text-[12.5px] text-slate-400 mt-1">The full pipeline is replaying against the reference set</p>
+              </div>
+              <div className="mt-7 space-y-1">
+                {EVAL_STEPS.map((s, i) => {
+                  const state = step > i ? 'done' : step === i ? 'busy' : 'wait';
+                  return (
+                    <div key={i} className={cx('flex items-center gap-3.5 rounded-xl px-4 py-3 transition-colors', state === 'busy' && 'bg-brand-50/70')}>
+                      <span className={cx('w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                        state === 'done' ? 'bg-emerald-50 text-emerald-600' : state === 'busy' ? 'bg-brand-100 text-brand-600' : 'bg-slate-50 text-slate-300')}>
+                        {state === 'done' ? <Icon name="check" size={14} strokeWidth={2.6}/>
+                          : <Icon name={s.icon} size={14} className={state === 'busy' ? 'animate-pulse' : ''}/>}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className={cx('text-[13px] font-bold truncate', state === 'wait' ? 'text-slate-300' : 'text-ink-800')}>{s.label}</div>
+                        <div className="text-[11px] text-slate-400 truncate">{s.sub}</div>
+                      </div>
+                      {state === 'busy' && <Icon name="loader" size={15} className="text-brand-500 animate-spin shrink-0"/>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-6">
+                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-ai-500 to-aqua-400 transition-all duration-500"
+                    style={{ width: `${Math.min(100, (step / EVAL_STEPS.length) * 100)}%` }}/>
+                </div>
+              </div>
+            </M>
+          ) : (
+            <M from={{opacity:0, y:18}} to={{opacity:1, y:0}} className="card overflow-hidden" key={phase}>
+              <div className="relative p-7 text-white overflow-hidden" style={{ background:'linear-gradient(120deg,#0A1A2F,#172E6E 55%,#4C1D95 110%)' }}>
+                <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-ai-500/20 blur-3xl animate-drift pointer-events-none"/>
+                <div className="relative flex flex-col md:flex-row items-center gap-7">
+                  <div className="shrink-0">
+                    <Ring value={view.ringValue} size={172} thickness={14} from="#A78BFA" to="#22D3EE" track="rgba(255,255,255,.12)" delay={phase === 'done' ? 200 : 500}>
+                      {(v) => (<>
+                        <div className="font-display text-[35px] font-bold leading-none tabular-nums">{v.toFixed(1)}<span className="text-[19px] opacity-60">%</span></div>
+                        <div className="text-[10px] font-bold tracking-[0.14em] uppercase opacity-60 mt-1.5">{view.ringLabel}</div>
+                      </>)}
+                    </Ring>
+                  </div>
+                  <div className="text-center md:text-left min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1.5">
+                      <Icon name={view.badge ? 'alertTriangle' : 'gauge'} size={13} className={cx('shrink-0', view.badge ? 'text-amber-300' : 'text-aqua-300')}/>
+                      <span className={cx('text-[10.5px] font-bold tracking-wide uppercase whitespace-nowrap', view.badge ? 'text-amber-300' : 'text-aqua-300')}>
+                        {view.badge ? view.badge.text : 'Hackathon Evaluation Score'}
+                      </span>
+                    </div>
+                    <h2 className="font-display text-[24px] font-bold mt-3">{view.title}</h2>
+                    <p className="text-white/55 text-[13px] leading-relaxed mt-1.5 max-w-sm">
+                      {view.subtitle}
+                    </p>
+                    {mode === 'demo' && (
+                      <div className="inline-flex items-center gap-1.5 mt-3 rounded-full bg-emerald-400/15 px-3 py-1.5 text-[12px] font-bold text-emerald-300 whitespace-nowrap">
+                        <Icon name="trendingUp" size={13} className="shrink-0"/>+1.2 vs last run
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-5">
+                {view.bars.map(([l, v], i) => (
+                  <div key={l}>
+                    <div className="flex items-center justify-between mb-2 gap-3">
+                      <span className="text-[13px] font-semibold text-ink-700 truncate">{l}</span>
+                      <span className="font-display text-[15px] font-bold text-navy-900 tabular-nums shrink-0">{v.toFixed(1)}%</span>
+                    </div>
+                    {bar(v, [.15,.28,.41][i])}
+                  </div>
+                ))}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {view.categories.map(([c,v]) => (
+                    <span key={c} className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-[11.5px] font-bold text-ink-700 whitespace-nowrap">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: view.categoriesAreCounts ? '#2563EB' : (v >= 93 ? '#10B981' : '#2563EB') }}/>
+                      {c} · {v}{view.categoriesAreCounts ? '' : '%'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </M>
+          )}
+        </div>
+
+        <div className="xl:col-span-5 space-y-5">
+          <M from={{opacity:0, y:18}} to={{opacity:1, y:0}} delay={.12} className="card overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-navy-950">
+              <span className="flex items-center gap-2 text-[12px] font-bold text-slate-300 font-mono min-w-0">
+                <Icon name="database" size={13} className="text-aqua-400 shrink-0"/><span className="truncate">submission.json</span>
+              </span>
+              <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-bold text-slate-400 shrink-0">
+                {submissionData ? `${Object.keys(submissionData).length} emails` : 'v5'}
+              </span>
+            </div>
+            <div className="p-5 bg-navy-900 text-slate-300">
+              {submissionData ? <LiveSubmissionPreview data={submissionData}/> : <SubmissionPreview/>}
+            </div>
+            <div className="flex items-center gap-2.5 p-4 border-t border-slate-100">
+              <button className="btn-primary btn-sm flex-1" onClick={download}><Icon name="download" size={14}/>Download</button>
+              <button className="btn-ghost btn-sm flex-1" onClick={copy}><Icon name="files" size={14}/>Copy shape</button>
+            </div>
+          </M>
+          <M from={{opacity:0, y:18}} to={{opacity:1, y:0}} delay={.2} className="card p-5">
+            <h3 className="font-bold text-[14.5px] text-navy-900 mb-1">Score history</h3>
+            <p className="text-[11.5px] text-slate-400 mb-3">Last 6 evaluation runs</p>
+            <div className="h-36"><ChartCanvas build={buildHistory}/></div>
+          </M>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/pages/Settings.tsx
+   ================================================================ */
+function SettingsPage() {
+  const { settings, setSettings, emails, reviews, toast, resetDemo } = useApp();
+  const [profile, setProfile] = useState({ name:'Amelia Rahman', email:'amelia@nooutput.ai', role:'Verification Lead' });
+  const [confirmReset, setConfirmReset] = useState(false);
+  useEffect(() => { if (confirmReset) { const t = setTimeout(() => setConfirmReset(false), 3000); return () => clearTimeout(t); } }, [confirmReset]);
+  const setS = (patch) => setSettings(s => ({ ...s, ...patch }));
+
+  return (
+    <div className="space-y-5 max-w-5xl">
+      <div>
+        <h1 className="font-display text-[26px] font-bold text-navy-900 tracking-tight">Settings</h1>
+        <p className="text-sm text-slate-400 mt-1">Console preferences, AI engine behaviour and data controls</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-5 items-start">
+        <M from={{opacity:0, y:16}} to={{opacity:1, y:0}} className="card p-6">
+          <h3 className="font-bold text-[15px] text-navy-900 mb-5 flex items-center gap-2">
+            <Icon name="user" size={16} className="text-brand-500 shrink-0"/>Profile
+          </h3>
+          <div className="flex items-center gap-4 mb-5">
+            <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-aqua-500 text-white text-lg font-bold flex items-center justify-center shadow-glowBrand shrink-0">AR</span>
+            <div className="min-w-0">
+              <div className="text-[14px] font-bold text-ink-900 truncate">{profile.name}</div>
+              <div className="text-[12px] text-slate-400 truncate">{profile.role}</div>
+            </div>
+          </div>
+          <div className="space-y-3.5">
+            <div><label className="text-[11.5px] font-bold text-slate-400 uppercase tracking-wide">Full name</label>
+              <input className="input mt-1.5" value={profile.name} onChange={e => setProfile({ ...profile, name:e.target.value })}/></div>
+            <div><label className="text-[11.5px] font-bold text-slate-400 uppercase tracking-wide">Email</label>
+              <input className="input mt-1.5" value={profile.email} onChange={e => setProfile({ ...profile, email:e.target.value })}/></div>
+            <div><label className="text-[11.5px] font-bold text-slate-400 uppercase tracking-wide">Role</label>
+              <select className="input mt-1.5 cursor-pointer" value={profile.role} onChange={e => setProfile({ ...profile, role:e.target.value })}>
+                <option>Verification Lead</option><option>Operations Manager</option><option>Reviewer</option><option>Admin</option>
+              </select></div>
+          </div>
+          <button className="btn-primary mt-5 w-full" onClick={() => toast('Profile saved', 'Your details were updated.', 'success')}>
+            <Icon name="check" size={15}/>Save changes
+          </button>
+        </M>
+
+        <M from={{opacity:0, y:16}} to={{opacity:1, y:0}} delay={.1} className="card p-6">
+          <h3 className="font-bold text-[15px] text-navy-900 mb-5 flex items-center gap-2">
+            <Icon name="cpu" size={16} className="text-ai-500 shrink-0"/>AI Engine
+          </h3>
+          <div className="mb-5">
+            <label className="text-[11.5px] font-bold text-slate-400 uppercase tracking-wide">Model</label>
+            <select className="input mt-1.5 cursor-pointer" value={settings.model} onChange={e => setS({ model:e.target.value })}>
+              <option>{PRODUCT.engine} (Vision + OCR)</option><option>NOOUTPUT Engine v2.0</option><option>Hybrid · Rules + NLP fallback</option>
+            </select>
+          </div>
+          <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-4 mb-2">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <span className="text-[13px] font-semibold text-ink-800">Review confidence threshold</span>
+              <span className="font-display font-bold text-brand-600 text-[15px] shrink-0">{settings.threshold}%</span>
+            </div>
+            <input type="range" min="50" max="95" value={settings.threshold} onChange={e => setS({ threshold:+e.target.value })} className="w-full"/>
+            <p className="text-[11.5px] text-slate-400 mt-2">Escalate to human review when classification or comparison confidence falls below this level.</p>
+          </div>
+          <div>
+            <SettingRow title="Auto-release verified comparisons" desc="Emails scoring OK on all seven fields skip the review queue." on={settings.autoRelease} onChange={v => setS({ autoRelease:v })}/>
+            <SettingRow title="Semantic fallback" desc="Use fuzzy entity matching when exact comparison fails." on={settings.semantic} onChange={v => setS({ semantic:v })}/>
+            <SettingRow title="OCR enhancement" desc="Pre-process scans (deskew, upscale) before extraction." on={settings.ocr} onChange={v => setS({ ocr:v })}/>
+          </div>
+        </M>
+
+        <M from={{opacity:0, y:16}} to={{opacity:1, y:0}} delay={.15} className="card p-6">
+          <h3 className="font-bold text-[15px] text-navy-900 mb-2 flex items-center gap-2">
+            <Icon name="bell" size={16} className="text-amber-500 shrink-0"/>Notifications
+          </h3>
+          <SettingRow title="Mismatch alerts" desc="Notify me the moment a defect is detected." on={settings.nMismatch} onChange={v => setS({ nMismatch:v })}/>
+          <SettingRow title="Review reminders" desc="Ping me when a case sits in the queue over 2 hours." on={settings.nReview} onChange={v => setS({ nReview:v })}/>
+          <SettingRow title="Weekly digest" desc="Summary of throughput, defects and scores every Monday." on={settings.nDigest} onChange={v => setS({ nDigest:v })}/>
+        </M>
+
+        <M from={{opacity:0, y:16}} to={{opacity:1, y:0}} delay={.2} className="card p-6">
+          <h3 className="font-bold text-[15px] text-navy-900 mb-4 flex items-center gap-2">
+            <Icon name="database" size={16} className="text-aqua-600 shrink-0"/>Data controls
+          </h3>
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            {[['Emails', emails.length],['Open cases', reviews.length],['Eval runs', 6]].map(([l,v]) => (
+              <div key={l} className="rounded-xl bg-slate-50/80 border border-slate-100 p-3 text-center">
+                <div className="font-display text-xl font-bold text-navy-900">{v}</div>
+                <div className="text-[10.5px] text-slate-400 font-semibold uppercase tracking-wide mt-0.5 truncate">{l}</div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2.5">
+            <button className="btn-ghost w-full" onClick={() => {
+              const blob = new Blob([JSON.stringify(emails, null, 2)], { type:'application/json' });
+              const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nooutput_export.json'; a.click();
+              URL.revokeObjectURL(a.href);
+              toast('Export ready', 'nooutput_export.json downloaded.', 'success');
+            }}><Icon name="download" size={14}/>Export all data (JSON)</button>
+            <button className={cx('w-full', confirmReset ? 'btn-danger-o' : 'btn-ghost')} style={confirmReset ? {} : { color:'#DC2626' }}
+              onClick={() => { if (!confirmReset) { setConfirmReset(true); return; } resetDemo(); setConfirmReset(false); }}>
+              <Icon name="refresh" size={14}/>{confirmReset ? 'Click again to confirm reset' : 'Reset demo data'}
+            </button>
+          </div>
+        </M>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/components/UploadModal.tsx
+   ================================================================ */
+function UploadModal({ open, onClose }) {
+  const [phase, setPhase] = useState('idle');
+  const [pct, setPct] = useState(0);
+  useEffect(() => { if (!open) { setPhase('idle'); setPct(0); } }, [open]);
+  useEffect(() => {
+    if (phase !== 'uploading') return;
+    const t = setInterval(() => setPct(p => {
+      const n = p + 4 + Math.random()*7;
+      if (n >= 100) { clearInterval(t); setTimeout(() => setPhase('done'), 350); return 100; }
+      return n;
+    }), 130);
+    return () => clearInterval(t);
+  }, [phase]);
+  if (!open) return null;
+  const stage = pct < 35 ? 'Extracting inbox bundle…' : pct < 70 ? 'Indexing emails & attachments…' : 'Queueing AI classification…';
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-navy-950/55 backdrop-blur-sm" onClick={onClose}/>
+      <M from={{opacity:0, transform:'scale(.94) translateY(14px)'}} to={{opacity:1, transform:'none'}} dur={.3} className="relative card w-full max-w-lg p-6 shadow-lift">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-bold text-[17px] text-navy-900">Upload dataset</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="x" size={16}/></button>
+        </div>
+        {phase === 'done' ? (
+          <div className="py-6 flex flex-col items-center text-center animate-popIn">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center"><Icon name="checkCircle" size={30}/></div>
+            <h4 className="font-display font-bold text-navy-900 text-lg mt-4">Ingestion complete</h4>
+            <p className="text-[13px] text-slate-400 mt-1.5">14 emails and 23 attachments queued. The AI pipeline is processing now.</p>
+            <button className="btn-primary mt-6" onClick={onClose}>Done</button>
+          </div>
+        ) : phase === 'uploading' ? (
+          <div className="py-4">
+            <div className="flex items-center gap-4">
+              <LoadingAnimation size={48}/>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13.5px] font-bold text-ink-800">{stage}</div>
+                <div className="font-mono text-[12px] text-slate-400 mt-0.5">{Math.round(pct)}% · inbox_2026W38.zip</div>
+              </div>
+            </div>
+            <div className="mt-5 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-aqua-400 transition-all duration-150" style={{ width:pct+'%' }}/>
+            </div>
+          </div>
+        ) : (
+          <>
+            <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50/40 hover:bg-brand-50/80 hover:border-brand-400 transition-all p-10 text-center">
+              <input type="file" className="hidden" onChange={() => setPhase('uploading')}/>
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-white shadow-card flex items-center justify-center text-brand-500"><Icon name="upload" size={24}/></div>
+              <div className="font-bold text-ink-800 mt-4">Drop inbox.zip here, or browse</div>
+              <div className="text-[12px] text-slate-400 mt-1">Bundle: inbox/ · attachments/ · sample_submission.json · loader.py</div>
+            </label>
+            <div className="flex items-center gap-3 mt-4">
+              <button className="btn-ghost flex-1" onClick={() => setPhase('uploading')}><Icon name="zap" size={14}/>Use demo dataset</button>
+              <span className="text-[11px] text-slate-400 flex-1 text-right font-mono">POST /upload</span>
+            </div>
+          </>
+        )}
+      </M>
+    </div>
+  );
+}
+
+/* ================================================================
+   src/App.tsx
+   ================================================================ */
+const AppCtx = createContext(null);
+const useApp = () => useContext(AppCtx);
+const PROFILE_NAME = 'Amelia Rahman';
+
+/* ================================================================
+   Live backend wiring
+   ------------------------------------------------------------------
+   Everything above this point is the original self-contained demo
+   (mock data + full UI). Below, we optionally hydrate that same UI
+   shape from the real FastAPI backend. If the backend can't be
+   reached, the app quietly keeps running on the bundled demo data —
+   a live-demo booth should never show a broken screen.
+   ================================================================ */
+const API_BASE = (window.API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+
+const DB_FIELD_MAP = { port_of_loading: 'port_loading', port_of_discharge: 'port_discharge', gross_weight_kg: 'gross_weight' };
+function dbKey(f) { return DB_FIELD_MAP[f] || f; }
+
+async function apiLogin(user, pass) {
+  const res = await fetch(API_BASE + '/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: user, password: pass }),
+  });
+  if (!res.ok) throw new Error('login failed');
+  return res.json(); // { token, username }
+}
+
+async function apiFetchFullEmails(token) {
+  const res = await fetch(API_BASE + '/emails/full', { headers: { Authorization: 'Bearer ' + token } });
+  if (!res.ok) throw new Error('failed to load emails from backend');
+  return res.json();
+}
+
+async function apiPost(path, token, body) {
+  const res = await fetch(API_BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).detail || ''; } catch {}
+    throw new Error(detail || `${path} failed (${res.status})`);
+  }
+  return res.json();
+}
+
+async function apiGet(path, token) {
+  const res = await fetch(API_BASE + path, { headers: { Authorization: 'Bearer ' + token } });
+  if (!res.ok) throw new Error(`${path} failed (${res.status})`);
+  return res.json();
+}
+
+function prf(tp, fp, fn) {
+  const p = (tp + fp) ? tp / (tp + fp) : 0;
+  const r = (tp + fn) ? tp / (tp + fn) : 0;
+  const f = (p + r) ? 2 * p * r / (p + r) : 0;
+  return { p, r, f };
+}
+
+function buildLocalSummary(emails) {
+  const total = emails.length;
+  const processed = emails.filter(e => e.status && e.status !== 'PROCESSING').length;
+  const blEmails = emails.filter(e => e.category === 'BL_COMPARISON');
+  const mismatches = blEmails.filter(e => e.status === 'MISMATCH').length;
+  const ok = blEmails.filter(e => e.status === 'OK').length;
+  const reviews = emails.filter(e => e.status === 'NEEDS_REVIEW').length;
+  const byCategory = {};
+  emails.forEach(e => { if (e.category) byCategory[e.category] = (byCategory[e.category] || 0) + 1; });
+  const confidences = emails.map(e => e.conf || 0).filter(v => v > 0);
+  const avgConfidence = confidences.length ? confidences.reduce((a, b) => a + b, 0) / confidences.length : 0;
+  return {
+    total, processed,
+    processedRate: total ? processed / total : 0,
+    blTotal: blEmails.length, mismatches, reviews, ok,
+    defectRate: blEmails.length ? mismatches / blEmails.length : 0,
+    reviewRate: blEmails.length ? reviews / blEmails.length : 0,
+    avgConfidence, byCategory,
+  };
+}
+
+function fmtDateTime(iso) {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return { date: '', time: '' };
+    return {
+      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    };
+  } catch { return { date: '', time: '' }; }
+}
+
+function findDocByType(documents, type) {
+  return documents.find(d => d.document_type === type)
+    || documents.find(d => (d.filename || '').toUpperCase().includes('_' + type));
+}
+
+function mapFieldsToSiBl(fields) {
+  if (!fields) return null;
+  const out = {};
+  FIELDS.forEach(f => { out[f.key] = fields[dbKey(f.key)] ?? null; });
+  return out;
+}
+
+function mapAttachment(d) {
+  const fieldEntries = d.fields ? Object.entries(d.fields).filter(([, v]) => v !== null && v !== undefined) : [];
+  const excerpt = fieldEntries.map(([k, v]) => `${k.toUpperCase()}: ${v}`);
+  return doc(d.filename, d.document_type || 'DOC', '', fieldEntries.length, d.readable ? 'extracted' : 'failed', excerpt);
+}
+
+function buildEvidence(defectFields, siDoc, blDoc) {
+  const evidence = [];
+  (defectFields || []).forEach(f => {
+    const label = fieldLabel(f);
+    if (siDoc && siDoc.fields) evidence.push({ field: f, doc: 'SI', text: `${label.toUpperCase()}: ${valFmt(f, siDoc.fields[dbKey(f)])}` });
+    if (blDoc && blDoc.fields) evidence.push({ field: f, doc: 'BL', text: `${label.toUpperCase()}: ${valFmt(f, blDoc.fields[dbKey(f)])}` });
+  });
+  return evidence;
+}
+
+function mapBackendEmailToUi(e) {
+  const { date, time } = fmtDateTime(e.created_at);
+  const documents = e.documents || [];
+  const siDoc = findDocByType(documents, 'SI');
+  const blDoc = findDocByType(documents, 'BL');
+  const cmp = e.comparison;
+  const defectFields = (cmp && cmp.defect_fields) || [];
+  const isPending = e.status === 'PENDING' || e.status === 'PROCESSING';
+  const status = e.category === 'BL_COMPARISON'
+    ? (cmp ? cmp.status : (isPending ? 'PROCESSING' : 'NEEDS_REVIEW'))
+    : (isPending ? 'PROCESSING' : 'PROCESSED');
+  return {
+    id: e.email_id,
+    subject: e.subject,
+    sender: e.from,
+    from: e.from,
+    category: e.category,
+    status,
+    conf: e.classification_confidence ?? 0,
+    date, time,
+    body: e.body,
+    atts: documents.map(mapAttachment),
+    defectFields,
+    reviewReason: cmp ? cmp.review_reason : null,
+    si: mapFieldsToSiBl(siDoc && siDoc.fields),
+    bl: mapFieldsToSiBl(blDoc && blDoc.fields),
+    evidence: buildEvidence(defectFields, siDoc, blDoc),
+  };
+}
+
+function reviewCaseFromEmail(email) {
+  const reason = email.reviewReason || 'manual';
+  const reasonMeta = REASONS[reason] || REASONS.manual;
+  const fieldsForEdit = email.defectFields.length ? email.defectFields : FIELDS.map(f => f.key);
+  return {
+    id: 'R-' + email.id,
+    emailId: email.id,
+    reason,
+    confidence: Math.round((email.conf || 0) * 100),
+    received: email.time || '',
+    summary: `${reasonMeta.label}. ` + (email.defectFields.length
+      ? `Affected fields: ${email.defectFields.map(fieldLabel).join(', ')}.`
+      : 'Please verify against the source documents before releasing.'),
+    suggestion: 'Verify against the source documents, then approve or correct.',
+    editFields: fieldsForEdit.map(f => ({
+      key: f, label: fieldLabel(f),
+      si: valFmt(f, email.si ? email.si[f] : null),
+      bl: valFmt(f, email.bl ? email.bl[f] : null),
+      value: String(email.si ? (email.si[f] ?? '') : ''),
+    })),
+    evidence: email.evidence && email.evidence.length
+      ? email.evidence
+      : [{ doc: 'AI', tone: 'warn', lines: ['See source documents for details — ' + reasonMeta.label + '.'] }],
+    timeline: [
+      { t: email.time, label: 'Email received', icon: 'mail', state: 'done' },
+      { t: '', label: 'AI processed — ' + email.category, icon: 'sparkles', state: 'done' },
+      { t: '', label: 'Issue detected — ' + reason, icon: 'alertTriangle', state: 'done' },
+      { t: '', label: 'Waiting for reviewer', icon: 'clock', state: 'active' },
+    ],
+  };
+}
+
+function App() {
+  const [authed, setAuthed] = useState(false);
+  const [authToken, setAuthToken] = useState(null);
+  const [liveMode, setLiveMode] = useState(false);
+  const [route, setRoute] = useState({ page:'dashboard', id:null });
+  const [emails, setEmails] = useState(clone(initialEmails));
+  const [reviews, setReviews] = useState(clone(initialReviews));
+  const [toasts, setToasts] = useState([]);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchSeed, setSearchSeed] = useState('');
+  const [settings, setSettings] = useState({ model:PRODUCT.engine, threshold:70, autoRelease:true, semantic:true, ocr:true, nMismatch:true, nReview:true, nDigest:false });
+
+  const toast = (title, desc, type='info') => {
+    const id = Math.random();
+    setToasts(t => [...t, { id, title, desc, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3900);
+  };
+  const dismissToast = (id) => setToasts(t => t.filter(x => x.id !== id));
+  const updateEmail = (id, patch) => setEmails(list => list.map(e => e.id === id ? { ...e, ...patch } : e));
+  const addReview = (email) => {
+    setReviews(r => [...r, {
+      id: String(108 + r.length), emailId: email.id, reason:'manual', confidence: Math.round(email.conf*100), received:'now',
+      summary: `Reviewer escalation on ${email.id}. Defect fields: ${email.defectFields.map(fieldLabel).join(', ') || 'none'}. Confirm or correct the AI result.`,
+      suggestion:'Verify against the source documents, then approve or correct.',
+      editFields: email.defectFields.map(f => ({ key:f, label:fieldLabel(f), si: valFmt(f, email.si ? email.si[f] : null), bl: valFmt(f, email.bl ? email.bl[f] : null), value: String(email.si ? (email.si[f] ?? '') : '') })),
+      evidence: (email.evidence || [{ doc:'AI', tone:'warn', lines:['Escalated manually by ' + PROFILE_NAME] }]),
+      timeline: [
+        { t: email.time, label:'Email received', icon:'mail', state:'done' },
+        { t:'', label:'AI processed — ' + email.category, icon:'sparkles', state:'done' },
+        { t:'', label:'Escalated by reviewer', icon:'userCheck', state:'done' },
+        { t:'', label:'Waiting for decision', icon:'clock', state:'active' },
+      ],
+    }]);
+    toast('Sent to review', email.id + ' added to the human review queue.', 'warn');
+  };
+  const navigate = (page, id=null) => { setRoute({ page, id }); setSidebarOpen(false); };
+  const resetDemo = () => { setEmails(clone(initialEmails)); setReviews(clone(initialReviews)); toast('Demo reset', 'All emails, cases and settings restored.', 'info'); };
+  const restoreReviews = () => setReviews(clone(initialReviews));
+
+  useEffect(() => {
+    if (!authed || !authToken) return;
+    let cancelled = false;
+    apiFetchFullEmails(authToken)
+      .then(data => {
+        if (cancelled) return;
+        const mapped = data.map(mapBackendEmailToUi);
+        setEmails(mapped);
+        setReviews(mapped.filter(e => e.status === 'NEEDS_REVIEW').map(reviewCaseFromEmail));
+        setLiveMode(true);
+        toast('Connected to backend', `Loaded ${mapped.length} emails from the live API.`, 'success');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        toast('Offline demo mode', 'Could not reach the backend at ' + API_BASE + ' — showing sample data instead.', 'info');
+      });
+    return () => { cancelled = true; };
+  }, [authed, authToken]);
+
+  const ctx = { emails, reviews, settings, setSettings, toast, dismissToast, updateEmail, addReview, navigate, resetDemo, restoreReviews, setReviews, openUpload:() => setUploadOpen(true), searchSeed, setSearchSeed, liveMode, authToken };
+
+  if (!authed) return <LoginPage onLogin={(token) => { setAuthToken(token || null); setAuthed(true); }}/>;
+
+  const PAGES = {
+    dashboard: <DashboardPage/>,
+    emails: <EmailsPage/>,
+    detail: <EmailDetailPage id={route.id}/>,
+    reviews: <ReviewsPage/>,
+    evaluation: <EvaluationPage/>,
+    settings: <SettingsPage/>,
+  };
+
+  return (
+    <AppCtx.Provider value={ctx}>
+      <div className="h-screen flex flex-col bg-ink-50">
+        <Topbar route={route.page} onMenu={() => setSidebarOpen(true)} onLogout={() => setAuthed(false)}/>
+        <div className="flex flex-1 min-h-0">
+          <aside className="hidden lg:flex flex-col w-[248px] shrink-0 border-r border-slate-200/70 bg-white">
+            <SidebarContent route={route.page} navigate={navigate}/>
+          </aside>
+          {sidebarOpen && <>
+            <div className="fixed inset-0 bg-navy-950/45 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)}/>
+            <aside className="fixed inset-y-0 left-0 z-50 w-[264px] bg-white shadow-lift lg:hidden">
+              <SidebarContent route={route.page} navigate={navigate}/>
+            </aside>
+          </>}
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            <div key={route.page + ':' + (route.id || '')} className="p-4 lg:p-7 max-w-[1440px] mx-auto">
+              <div className="animate-pageIn">{PAGES[route.page]}</div>
+            </div>
+          </main>
+        </div>
+        <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)}/>
+        <Toaster toasts={toasts} dismiss={dismissToast}/>
+      </div>
+    </AppCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

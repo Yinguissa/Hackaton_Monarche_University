@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sdoc
+      POSTGRES_PASSWORD: sdoc
+      POSTGRES_DB: sdoc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdoc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://sdoc:sdoc@postgres:5432/sdoc
+      APP_USERNAME: admin
+      APP_PASSWORD: admin123
+      DISABLE_AUTH: "0"
+      STORAGE_ROOT: /app/storage
+      # Optional — leave blank to run fully deterministic/offline:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # Base URL of the organizers' scoring server, if/when available:
+      EVAL_SERVER_URL: ${EVAL_SERVER_URL:-http://eval-server:8000}
+    volumes:
+      - ./backend/storage:/app/storage
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    environment:
+      API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:80"
+
+volumes:
+  pgdata:
